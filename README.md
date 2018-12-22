@@ -2,6 +2,10 @@
 Python Indexer for Sourcetrail based on jedi and SourcetrailDB
 
 
+## CI Pipelines
+Windows: [![Build status](https://ci.appveyor.com/api/projects/status/4vo082swmhmny1a1/branch/master?svg=true)](https://ci.appveyor.com/project/mlangkabel/sourcetrailpythonindexer/branch/master)
+
+
 ## Requirements
 * [jedi](https://github.com/davidhalter/jedi) (v0.13.1)
 * [SourcetrailDB](https://github.com/CoatiSoftware/SourcetrailDB) for Python (v1)

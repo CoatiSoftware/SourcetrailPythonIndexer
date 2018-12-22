@@ -1,0 +1,36 @@
+version: 0.0.0.{build}
+
+
+environment:
+    matrix:
+        - MBITS: 32
+          PYTHON_VERSION: 37
+        - MBITS: 64
+          PYTHON_VERSION: 37
+
+
+install:
+    - ps: |
+        if ($env:MBITS -eq "32") {
+            echo "Architecture set to 32 bit."
+            $env:PYTHON_PATH="C:/Python$env:PYTHON_VERSION"
+        } elseif ($env:MBITS -eq "64") {
+            echo "Architecture set to 64 bit."
+            $env:PYTHON_PATH="C:/Python$env:PYTHON_VERSION-x64"
+        } else {
+            echo "No architecture set. Build will be canceled."
+        }
+    - SET PIP_PATH=%PYTHON_PATH%/Scripts
+    - SET PATH=%PYTHON_PATH%;%PIP_PATH%;%PATH%
+    - cmd: pip install jedi
+
+
+build_script:
+    - ps: |
+        $env:SOURCETRAILDB_PATH="sourcetrailbd_python" + $env:PYTHON_VERSION + "_v1_db23_p0-windows-" + $env:MBITS + "bit"
+        copy external/$env:SOURCETRAILDB_PATH/sourcetraildb.py ./
+        copy external/$env:SOURCETRAILDB_PATH/_sourcetraildb.pyd ./
+
+
+test_script:
+    - cmd: python test.py
