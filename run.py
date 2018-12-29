@@ -25,11 +25,9 @@ def main():
 	else:
 		print("Loaded database contains data.")
 
-	print("start all")
 	srctrl.beginTransaction()
 	indexSourceFile(sourceFilePath)
 	srctrl.commitTransaction()
-	print("end all")
 
 	if not srctrl.close():
 		print("ERROR: " + srctrl.getLastError())

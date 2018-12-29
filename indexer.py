@@ -105,15 +105,25 @@ class AstVisitor:
 					referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 					contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
 					
-					referenceId = self.client.recordReference(
-						contextSymbolId,
-						referencedSymbolId, 
-						srctrl.REFERENCE_CALL
-					)
-					if not referenceId:
-						print("ERROR: " + srctrl.getLastError())
-					
-					self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
+					referenceKind = -1
+
+					if True:
+						nextNode = getNext(node)
+						if nextNode is not None and nextNode.type == "trailer":
+							if len(nextNode.children) >= 2 and nextNode.children[0].value == "(" and nextNode.children[len(nextNode.children) - 1].value == ")":
+								referenceKind = srctrl.REFERENCE_CALL
+
+					if referenceKind is not -1:
+						referenceId = self.client.recordReference(
+							contextSymbolId,
+							referencedSymbolId,
+							referenceKind
+						)
+						if not referenceId:
+							print("ERROR: " + srctrl.getLastError())
+						
+						self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
+
 					break # we just record usage of the first definition
 
 
@@ -122,7 +132,7 @@ class AstVisitor:
 
 
 	def beginVisitClassdef(self, node):
-		nameNode = getDirectChildWithType(node, 'name')
+		nameNode = getFirstDirectChildWithType(node, 'name')
 		symbolId = self.client.recordSymbol(getNameHierarchyOfNode(node))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
@@ -151,7 +161,7 @@ class AstVisitor:
 
 
 	def beginVisitFuncdef(self, node):
-		nameNode = getDirectChildWithType(node, 'name')
+		nameNode = getFirstDirectChildWithType(node, 'name')
 		symbolId = self.client.recordSymbol(getNameHierarchyOfNode(node))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
@@ -162,7 +172,7 @@ class AstVisitor:
 
 	def beginVisitParameters(self, node):
 		for c in getDirectChildrenWithType(node, 'param'):
-			nameNode = getDirectChildWithType(c, 'name')
+			nameNode = getFirstDirectChildWithType(c, 'name')
 			localSymbolLocation = getParseLocationOfNode(nameNode)
 			localSymbolName = self.sourceFileName + "<" + str(localSymbolLocation.startLine) + ":" + str(localSymbolLocation.startColumn) + ">"
 			localSymbolId = self.client.recordLocalSymbol(localSymbolName)
@@ -427,7 +437,7 @@ def getNameHierarchyOfNode(node):
 	if node.type == 'name':
 		nameNode = node
 	else:
-		nameNode = getDirectChildWithType(node, 'name')
+		nameNode = getFirstDirectChildWithType(node, 'name')
 	if nameNode == None:
 		return None
 	nameElement = NameElement(nameNode.value)
@@ -462,7 +472,7 @@ def getParentWithType(node, type):
 	
 
 
-def getDirectChildWithType(node, type):
+def getFirstDirectChildWithType(node, type):
 	for c in node.children:
 		if c.type == type:
 			return c
@@ -475,3 +485,19 @@ def getDirectChildrenWithType(node, type):
 		if c.type == type:
 			children.append(c)
 	return children
+
+
+def getNext(node):
+	if hasattr(node, "children"):
+		for c in node.children:
+			return c
+
+	siblingSource = node
+	while siblingSource is not None and siblingSource.parent is not None:
+		sibling = siblingSource.get_next_sibling()
+		if sibling is not None:
+			return sibling
+		siblingSource = siblingSource.parent
+
+	return None
+	
