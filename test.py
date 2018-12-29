@@ -38,6 +38,16 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording References
 
+	def test_indexer_records_class_instantiation(self):
+		client = self.indexSourceCode(
+			"class Bar:\n"
+			"	pass\n"
+			"\n"
+			"bar = Bar()\n"
+		)
+		self.assertTrue("TYPE_USAGE: virtual_file.py -> Bar at [4:7|4:9]" in client.references)
+
+
 	def test_indexer_records_function_call(self):
 		client = self.indexSourceCode(
 			"def main():\n"
@@ -48,7 +58,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue("CALL: virtual_file.py -> main at [4:1|4:4]" in client.references)
 
 
-	def indexSourceCode(self, sourceCode):
+	def indexSourceCode(self, sourceCode, verbose = False):
 		workingDirectory = os.getcwd()
 		astVisitorClient = TestAstVisitorClient()
 
@@ -56,7 +66,7 @@ class TestPythonIndexer(unittest.TestCase):
 			sourceCode,
 			workingDirectory, 
 			astVisitorClient, 
-			False
+			verbose
 		)
 
 		astVisitorClient.updateReadableOutput()
@@ -120,11 +130,9 @@ class TestAstVisitorClient():
 			if "name" in self.localSymbolIdsToData[key]:
 				localSymbolString += self.localSymbolIdsToData[key]["name"]
 
-			if "local_symbol_location" in self.localSymbolIdsToData[key]:
-				localSymbolString += " at " + self.localSymbolIdsToData[key]["local_symbol_location"]
-
-			if localSymbolString:
-				self.localSymbols.append(localSymbolString)
+			if localSymbolString and "local_symbol_locations" in self.localSymbolIdsToData[key]:	
+				for location in self.localSymbolIdsToData[key]["local_symbol_locations"]:
+					self.localSymbols.append(localSymbolString + " at " + location)
 		
 		self.references = []
 		for key in self.referenceIdsToData:
@@ -252,15 +260,16 @@ class TestAstVisitorClient():
 		localSymbolId = self.getNextElementId()
 		self.serializedLocalSymbolsToIds[name] = localSymbolId
 		self.localSymbolIdsToData[localSymbolId] = { 
-			"id": localSymbolId, 
-			"name": name
+			"id": localSymbolId,
+			"name": name,
+			"local_symbol_locations": []
 		}
 		return localSymbolId
 
 
 	def recordLocalSymbolLocation(self, localSymbolId, parseLocation):
 		if localSymbolId in self.localSymbolIdsToData:
-			self.localSymbolIdsToData[localSymbolId]["local_symbol_location"] = parseLocation.toString()
+			self.localSymbolIdsToData[localSymbolId]["local_symbol_locations"].append(parseLocation.toString())
 
 
 	def recordCommentLocation(self, parseLocation):

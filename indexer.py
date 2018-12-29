@@ -87,44 +87,64 @@ class AstVisitor:
 		if self.contextSymbolIdStack:
 			(startLine, startColumn) = node.start_pos
 			if self.sourceFileContent is None: # we are indexing a real file
-				script = jedi.Script(None, startLine, startColumn, self.sourceFilePath)
+				script = jedi.Script(None, startLine, startColumn, self.sourceFilePath) # todo: provide a sys_path parameter here
 			else: # we are indexing a provided code snippet
 				script = jedi.Script(self.sourceFileContent, startLine, startColumn)
+				
 			for definition in script.goto_definitions():
-				if not definition.line or not definition.column:
-					# Early exit. For now we don't record references for names that don't have a valid definition location 
-					return
+				if definition is not None:
+					if not definition.line or not definition.column:
+						# Early exit. For now we don't record references for names that don't have a valid definition location 
+						return
 
-				if definition.line == startLine and definition.column == startColumn:
-					# Early exit. We don't record references for locations of names that are definitions
-					return
-
-				if definition is not None and definition._name is not None and definition._name.tree_name is not None:
-					referencedNameHierarchy = getNameHierarchyOfNode(definition._name.tree_name)
-
-					referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
-					contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
+					if definition.line == startLine and definition.column == startColumn:
+						# Early exit. We don't record references for locations of names that are definitions
+						return
 					
-					referenceKind = -1
+					referenceId = 0
 
-					if True:
-						nextNode = getNext(node)
-						if nextNode is not None and nextNode.type == "trailer":
-							if len(nextNode.children) >= 2 and nextNode.children[0].value == "(" and nextNode.children[len(nextNode.children) - 1].value == ")":
-								referenceKind = srctrl.REFERENCE_CALL
+					if definition.type == "class":
+						referencedNameHierarchy = getNameHierarchyOfNode(definition._name.tree_name)
 
-					if referenceKind is not -1:
+						referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
+						contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
+
 						referenceId = self.client.recordReference(
 							contextSymbolId,
 							referencedSymbolId,
-							referenceKind
+							srctrl.REFERENCE_TYPE_USAGE
 						)
 						if not referenceId:
 							print("ERROR: " + srctrl.getLastError())
-						
-						self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
 
-					break # we just record usage of the first definition
+					elif definition.type == "function":
+						if definition._name is not None and definition._name.tree_name is not None:
+							referencedNameHierarchy = getNameHierarchyOfNode(definition._name.tree_name)
+
+							referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
+							contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
+							
+							referenceKind = -1
+
+							if True:
+								nextNode = getNext(node)
+								if nextNode is not None and nextNode.type == "trailer":
+									if len(nextNode.children) >= 2 and nextNode.children[0].value == "(" and nextNode.children[len(nextNode.children) - 1].value == ")":
+										referenceKind = srctrl.REFERENCE_CALL
+
+							if referenceKind is not -1:
+								referenceId = self.client.recordReference(
+									contextSymbolId,
+									referencedSymbolId,
+									referenceKind
+								)
+								if not referenceId:
+									print("ERROR: " + srctrl.getLastError())
+								
+					if referenceId > 0:
+						self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
+						break # we just record usage of the first definition
+
 
 
 	def endVisitName(self, node):
@@ -433,6 +453,7 @@ class NameHierarchyEncoder(json.JSONEncoder):
 def getNameHierarchyOfNode(node):
 	if node == None:
 		return None
+
 	nameNode = None
 	if node.type == 'name':
 		nameNode = node
@@ -440,6 +461,7 @@ def getNameHierarchyOfNode(node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
 	if nameNode == None:
 		return None
+	
 	nameElement = NameElement(nameNode.value)
 	parentNode = node.parent
 	if node.type == 'name':
