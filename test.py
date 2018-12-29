@@ -26,6 +26,16 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue("FIELD: Foo.bar at [2:2|2:4]" in client.symbols)
 
 
+# Test Recording Local Symbols
+
+	def test_indexer_records_function_parameter_as_local_symbol(self):
+		client = self.indexSourceCode(
+			"def foo(bar):\n"
+			"	pass\n"
+		)
+		self.assertTrue("virtual_file.py<1:9> at [1:9|1:11]" in client.localSymbols)
+
+
 # Test Recording References
 
 	def test_indexer_records_function_call(self):
@@ -56,12 +66,15 @@ class TestPythonIndexer(unittest.TestCase):
 class TestAstVisitorClient():
 
 	symbols = []
+	localSymbols = []
 	references = []
 
 
 	def __init__(self):
 		self.serializedSymbolsToIds = {}
 		self.symbolIdsToData = {}
+		self.serializedLocalSymbolsToIds = {}
+		self.localSymbolIdsToData = {}
 		self.serializedReferencesToIds = {}
 		self.referenceIdsToData = {}
 
@@ -99,6 +112,19 @@ class TestAstVisitorClient():
 
 			if symbolString:
 				self.symbols.append(symbolString)
+
+		self.localSymbols = []
+		for key in self.localSymbolIdsToData:
+			localSymbolString = ""
+
+			if "name" in self.localSymbolIdsToData[key]:
+				localSymbolString += self.localSymbolIdsToData[key]["name"]
+
+			if "local_symbol_location" in self.localSymbolIdsToData[key]:
+				localSymbolString += " at " + self.localSymbolIdsToData[key]["local_symbol_location"]
+
+			if localSymbolString:
+				self.localSymbols.append(localSymbolString)
 		
 		self.references = []
 		for key in self.referenceIdsToData:
@@ -128,6 +154,7 @@ class TestAstVisitorClient():
 
 			if referenceString:
 				self.references.append(referenceString)
+
 
 	def getNextElementId(self):
 		id = self.nextSymbolId
@@ -219,13 +246,21 @@ class TestAstVisitorClient():
 
 
 	def recordLocalSymbol(self, name):
-		# FIXME: implement this one!
-		return 0
+		if name in self.serializedLocalSymbolsToIds:
+			return self.serializedLocalSymbolsToIds[serialized]
+
+		localSymbolId = self.getNextElementId()
+		self.serializedLocalSymbolsToIds[name] = localSymbolId
+		self.localSymbolIdsToData[localSymbolId] = { 
+			"id": localSymbolId, 
+			"name": name
+		}
+		return localSymbolId
 
 
 	def recordLocalSymbolLocation(self, localSymbolId, parseLocation):
-		# FIXME: implement this one!
-		return
+		if localSymbolId in self.localSymbolIdsToData:
+			self.localSymbolIdsToData[localSymbolId]["local_symbol_location"] = parseLocation.toString()
 
 
 	def recordCommentLocation(self, parseLocation):

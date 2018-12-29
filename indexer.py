@@ -65,6 +65,7 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 class AstVisitor:
 
 	sourceFilePath = None
+	sourceFileName = ""
 	sourceFileContent = None
 	client = None
 	contextSymbolIdStack = []
@@ -72,9 +73,10 @@ class AstVisitor:
 
 	def __init__(self, client, sourceFilePath, sourceFileContent = None):
 		self.client = client
-		self.sourceFilePath = sourceFilePath
+		self.sourceFilePath = sourceFilePath.replace("\\", "/")
+		self.sourceFileName = self.sourceFilePath.rsplit("/", 1).pop()
 		self.sourceFileContent = sourceFileContent
-		fileId = self.client.recordFile(sourceFilePath.replace("\\", "/"))
+		fileId = self.client.recordFile(self.sourceFilePath)
 		if not fileId:
 			print("ERROR: " + srctrl.getLastError())
 		self.contextSymbolIdStack.append(fileId)
@@ -158,6 +160,19 @@ class AstVisitor:
 		self.contextSymbolIdStack.append(symbolId)
 
 
+	def beginVisitParameters(self, node):
+		for c in getDirectChildrenWithType(node, 'param'):
+			nameNode = getDirectChildWithType(c, 'name')
+			localSymbolLocation = getParseLocationOfNode(nameNode)
+			localSymbolName = self.sourceFileName + "<" + str(localSymbolLocation.startLine) + ":" + str(localSymbolLocation.startColumn) + ">"
+			localSymbolId = self.client.recordLocalSymbol(localSymbolName)
+			self.client.recordLocalSymbolLocation(localSymbolId, localSymbolLocation)
+
+
+	def endVisitParameters(self, node):
+		pass
+
+
 	def endVisitFuncdef(self, node):
 		self.contextSymbolIdStack.pop()
 
@@ -174,6 +189,8 @@ class AstVisitor:
 			self.beginVisitExprStmt(node)
 		elif node.type == 'funcdef':
 			self.beginVisitFuncdef(node)
+		elif node.type == 'parameters':
+			self.beginVisitParameters(node)
 		
 		if hasattr(node, 'children'):
 			for c in node.children:
@@ -187,6 +204,8 @@ class AstVisitor:
 			self.endVisitExprStmt(node)
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
+		elif node.type == 'parameters':
+			self.endVisitParameters(node)
 
 
 class VerboseAstVisitor(AstVisitor):
@@ -448,3 +467,11 @@ def getDirectChildWithType(node, type):
 		if c.type == type:
 			return c
 	return None
+
+	
+def getDirectChildrenWithType(node, type):
+	children = []
+	for c in node.children:
+		if c.type == type:
+			children.append(c)
+	return children
