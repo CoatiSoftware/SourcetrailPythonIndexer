@@ -129,6 +129,9 @@ class AstVisitor:
 						if not referenceId:
 							print("ERROR: " + srctrl.getLastError())
 
+						# Record symbol kind. If the used type is within indexed code, this is not really necessary. In any other case, this is valuable info!
+						self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_CLASS)
+
 					elif definition.type == "function":
 						if definition._name is not None and definition._name.tree_name is not None:
 							referencedNameHierarchy = getNameHierarchyOfNode(definition._name.tree_name)
@@ -152,6 +155,9 @@ class AstVisitor:
 								)
 								if not referenceId:
 									print("ERROR: " + srctrl.getLastError())
+							
+							# Record symbol kind. If the called function is within indexed code, this is not really necessary. In any other case, this is valuable info!
+							self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_FUNCTION)
 								
 					if referenceId > 0:
 						self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
