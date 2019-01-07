@@ -1,13 +1,15 @@
 import jedi
 import json
 import os
+import sys
+
 import sourcetraildb as srctrl
 
 
 def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
 	sourceFilePath = "virtual_file.py"
 
-	environment = None
+	environment = jedi.api.environment.Environment(sys.executable)
 
 	project = jedi.api.project.Project(workingDirectory)
 
@@ -102,67 +104,74 @@ class AstVisitor:
 					column = startColumn,
 					environment = self.environment
 				)
-				
-			for definition in script.goto_definitions():
+			
+			for definition in script.goto_assignments(follow_imports=True):
 				if definition is not None:
 					if not definition.line or not definition.column:
 						# Early exit. For now we don't record references for names that don't have a valid definition location 
-						return
+						continue
 
-					if definition.line == startLine and definition.column == startColumn:
-						# Early exit. We don't record references for locations of names that are definitions
-						return
+					if definition.type in ["class", "function"]:
+						if definition.line == startLine and definition.column == startColumn:
+							# Early exit. We don't record references for locations of names that are definitions
+							continue
 					
-					referenceId = 0
+						referenceId = -1
 
-					if definition.type == "class":
-						referencedNameHierarchy = getNameHierarchyOfNode(definition._name.tree_name)
-
-						referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
-						contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
-
-						referenceId = self.client.recordReference(
-							contextSymbolId,
-							referencedSymbolId,
-							srctrl.REFERENCE_TYPE_USAGE
-						)
-						if not referenceId:
-							print("ERROR: " + srctrl.getLastError())
-
-						# Record symbol kind. If the used type is within indexed code, this is not really necessary. In any other case, this is valuable info!
-						self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_CLASS)
-
-					elif definition.type == "function":
-						if definition._name is not None and definition._name.tree_name is not None:
+						if definition.type == "class":
 							referencedNameHierarchy = getNameHierarchyOfNode(definition._name.tree_name)
 
 							referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 							contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
-							
-							referenceKind = -1
 
-							if True:
-								nextNode = getNext(node)
-								if nextNode is not None and nextNode.type == "trailer":
-									if len(nextNode.children) >= 2 and nextNode.children[0].value == "(" and nextNode.children[len(nextNode.children) - 1].value == ")":
-										referenceKind = srctrl.REFERENCE_CALL
+							referenceId = self.client.recordReference(
+								contextSymbolId,
+								referencedSymbolId,
+								srctrl.REFERENCE_TYPE_USAGE
+							)
 
-							if referenceKind is not -1:
-								referenceId = self.client.recordReference(
-									contextSymbolId,
-									referencedSymbolId,
-									referenceKind
-								)
-								if not referenceId:
-									print("ERROR: " + srctrl.getLastError())
-							
-							# Record symbol kind. If the called function is within indexed code, this is not really necessary. In any other case, this is valuable info!
-							self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_FUNCTION)
+							# Record symbol kind. If the used type is within indexed code, this is not really necessary. In any other case, this is valuable info!
+							self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_CLASS)
+
+						elif definition.type == "function":
+							if definition._name is not None and definition._name.tree_name is not None:
+								referencedNameHierarchy = getNameHierarchyOfNode(definition._name.tree_name)
+
+								referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
+								contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
 								
-					if referenceId > 0:
-						self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
-						break # we just record usage of the first definition
+								referenceKind = -1
 
+								if True:
+									nextNode = getNext(node)
+									if nextNode is not None and nextNode.type == "trailer":
+										if len(nextNode.children) >= 2 and nextNode.children[0].value == "(" and nextNode.children[len(nextNode.children) - 1].value == ")":
+											referenceKind = srctrl.REFERENCE_CALL
+
+								if referenceKind is not -1:
+									referenceId = self.client.recordReference(
+										contextSymbolId,
+										referencedSymbolId,
+										referenceKind
+									)
+								
+								# Record symbol kind. If the called function is within indexed code, this is not really necessary. In any other case, this is valuable info!
+								self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_FUNCTION)
+
+						if referenceId == -1:
+							continue
+						elif referenceId == 0:
+							print("ERROR: " + srctrl.getLastError())
+							continue
+						else:
+							self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
+							break # we just record usage of the first definition
+
+					elif definition.type in ["param"]:
+						localSymbolLocation = getParseLocationOfNode(node)
+						definitionLocation = getParseLocationOfNode(definition._name.tree_name)
+						localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, definitionLocation))
+						self.client.recordLocalSymbolLocation(localSymbolId, localSymbolLocation)
 
 
 	def endVisitName(self, node):
@@ -212,7 +221,7 @@ class AstVisitor:
 		for c in getDirectChildrenWithType(node, 'param'):
 			nameNode = getFirstDirectChildWithType(c, 'name')
 			localSymbolLocation = getParseLocationOfNode(nameNode)
-			localSymbolName = self.sourceFileName + "<" + str(localSymbolLocation.startLine) + ":" + str(localSymbolLocation.startColumn) + ">"
+			localSymbolName = getLocalSymbolName(self.sourceFileName, localSymbolLocation)
 			localSymbolId = self.client.recordLocalSymbol(localSymbolName)
 			self.client.recordLocalSymbolLocation(localSymbolId, localSymbolLocation)
 
@@ -498,6 +507,10 @@ def getParseLocationOfNode(node):
 	startLine, startColumn = node.start_pos
 	endLine, endColumn = node.end_pos
 	return ParseLocation(startLine, startColumn + 1, endLine, endColumn)
+
+
+def getLocalSymbolName(sourceFileName, parseLocation):
+	return sourceFileName + "<" + str(parseLocation.startLine) + ":" + str(parseLocation.startColumn) + ">"
 
 
 def getParentWithType(node, type):

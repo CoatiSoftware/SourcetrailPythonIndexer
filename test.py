@@ -36,6 +36,14 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue("virtual_file.py<1:9> at [1:9|1:11]" in client.localSymbols)
 
 
+	def test_indexer_records_usage_of_function_parameter_as_local_symbol(self):
+		client = self.indexSourceCode(
+			"def foo(bar):\n"
+			"	x = bar\n"
+		)
+		self.assertTrue("virtual_file.py<1:9> at [2:6|2:8]" in client.localSymbols)
+
+
 # Test Recording References
 
 	def test_indexer_records_class_instantiation(self):
@@ -255,7 +263,7 @@ class TestAstVisitorClient():
 
 	def recordLocalSymbol(self, name):
 		if name in self.serializedLocalSymbolsToIds:
-			return self.serializedLocalSymbolsToIds[serialized]
+			return self.serializedLocalSymbolsToIds[name]
 
 		localSymbolId = self.getNextElementId()
 		self.serializedLocalSymbolsToIds[name] = localSymbolId
