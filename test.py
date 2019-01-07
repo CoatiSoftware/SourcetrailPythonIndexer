@@ -44,6 +44,23 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue("virtual_file.py<1:9> at [2:6|2:8]" in client.localSymbols)
 
 
+	def test_indexer_records_variable_as_local_symbol(self):
+		client = self.indexSourceCode(
+			"def foo():\n"
+			"	x = 5\n"
+		)
+		self.assertTrue("virtual_file.py<2:2> at [2:2|2:2]" in client.localSymbols)
+
+
+	def test_indexer_records_usage_of_variable_as_local_symbol(self):
+		client = self.indexSourceCode(
+			"def foo():\n"
+			"	x = 5\n"
+			"	y = x\n"
+		)
+		self.assertTrue("virtual_file.py<2:2> at [3:6|3:6]" in client.localSymbols)
+
+
 # Test Recording References
 
 	def test_indexer_records_class_instantiation(self):

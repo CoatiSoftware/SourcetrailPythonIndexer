@@ -167,11 +167,12 @@ class AstVisitor:
 							self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
 							break # we just record usage of the first definition
 
-					elif definition.type in ["param"]:
+					elif definition.type in ["param", "statement"]:
 						localSymbolLocation = getParseLocationOfNode(node)
 						definitionLocation = getParseLocationOfNode(definition._name.tree_name)
 						localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, definitionLocation))
 						self.client.recordLocalSymbolLocation(localSymbolId, localSymbolLocation)
+						# don't continue here, because local variables can have multiple definitions (e.g. one in "if" branch and one in "else" branch)
 
 
 	def endVisitName(self, node):
