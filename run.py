@@ -39,4 +39,5 @@ def indexSourceFile(sourceFilePath):
 	indexer.indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, True)
 
 
-main()
+if __name__ == '__main__':
+	main()

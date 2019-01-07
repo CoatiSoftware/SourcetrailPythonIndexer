@@ -25,9 +25,9 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
 	)
 
 	if (isVerbose):
-		astVisitor = VerboseAstVisitor(astVisitorClient, sourceFilePath, sourceCode) 
+		astVisitor = VerboseAstVisitor(astVisitorClient, environment, sourceFilePath, sourceCode) 
 	else:
-		astVisitor = AstVisitor(astVisitorClient, sourceFilePath, sourceCode) 
+		astVisitor = AstVisitor(astVisitorClient, environment, sourceFilePath, sourceCode) 
 
 	astVisitor.traverseNode(module_node)
 
@@ -37,9 +37,8 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 	with open(sourceFilePath, 'r') as input:
 		sourceCode=input.read()
 
-	environment = None
-
 	project = jedi.api.project.Project(workingDirectory)
+	environment = project.get_environment()
 
 	evaluator = jedi.evaluate.Evaluator(
 		project, 
@@ -55,9 +54,9 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 	)
 
 	if (isVerbose):
-		astVisitor = VerboseAstVisitor(astVisitorClient, sourceFilePath) 
+		astVisitor = VerboseAstVisitor(astVisitorClient, environment, sourceFilePath) 
 	else:
-		astVisitor = AstVisitor(astVisitorClient, sourceFilePath) 
+		astVisitor = AstVisitor(astVisitorClient, environment, sourceFilePath) 
 
 	astVisitor.traverseNode(module_node)
 
@@ -69,10 +68,12 @@ class AstVisitor:
 	sourceFileContent = None
 	client = None
 	contextSymbolIdStack = []
+	environment = None
 
 
-	def __init__(self, client, sourceFilePath, sourceFileContent = None):
+	def __init__(self, client, environment, sourceFilePath, sourceFileContent = None):
 		self.client = client
+		self.environment = environment
 		self.sourceFilePath = sourceFilePath.replace("\\", "/")
 		self.sourceFileName = self.sourceFilePath.rsplit("/", 1).pop()
 		self.sourceFileContent = sourceFileContent
@@ -87,9 +88,20 @@ class AstVisitor:
 		if self.contextSymbolIdStack:
 			(startLine, startColumn) = node.start_pos
 			if self.sourceFileContent is None: # we are indexing a real file
-				script = jedi.Script(None, startLine, startColumn, self.sourceFilePath) # todo: provide a sys_path parameter here
+				script = jedi.Script(
+					source = None, 
+					line = startLine, 
+					column = startColumn, 
+					path = self.sourceFilePath, 
+					environment = self.environment
+				) # todo: provide a sys_path parameter here
 			else: # we are indexing a provided code snippet
-				script = jedi.Script(self.sourceFileContent, startLine, startColumn)
+				script = jedi.Script(
+					source = self.sourceFileContent,
+					line = startLine, 
+					column = startColumn,
+					environment = self.environment
+				)
 				
 			for definition in script.goto_definitions():
 				if definition is not None:
@@ -167,7 +179,7 @@ class AstVisitor:
 
 	def beginVisitExprStmt(self, node):
 		parentClassdefNode = getParentWithType(node, 'classdef')
-		if not parentClassdefNode == None:
+		if parentClassdefNode is not None:
 			definedNames = node.get_defined_names()
 			for nameNode in definedNames:
 				symbolId = self.client.recordSymbol(getNameHierarchyOfNode(nameNode))
@@ -240,8 +252,8 @@ class AstVisitor:
 
 class VerboseAstVisitor(AstVisitor):
 
-	def __init__(self, client, sourceFilePath, sourceFileContent = None):
-		AstVisitor.__init__(self, client, sourceFilePath, sourceFileContent)
+	def __init__(self, client, environment, sourceFilePath, sourceFileContent = None):
+		AstVisitor.__init__(self, client, environment, sourceFilePath, sourceFileContent)
 		self.indentationLevel = 0
 		self.indentationToken = "| "
 
