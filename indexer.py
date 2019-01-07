@@ -217,19 +217,6 @@ class AstVisitor:
 		self.contextSymbolIdStack.append(symbolId)
 
 
-	def beginVisitParameters(self, node):
-		for c in getDirectChildrenWithType(node, 'param'):
-			nameNode = getFirstDirectChildWithType(c, 'name')
-			localSymbolLocation = getParseLocationOfNode(nameNode)
-			localSymbolName = getLocalSymbolName(self.sourceFileName, localSymbolLocation)
-			localSymbolId = self.client.recordLocalSymbol(localSymbolName)
-			self.client.recordLocalSymbolLocation(localSymbolId, localSymbolLocation)
-
-
-	def endVisitParameters(self, node):
-		pass
-
-
 	def endVisitFuncdef(self, node):
 		self.contextSymbolIdStack.pop()
 
@@ -246,8 +233,6 @@ class AstVisitor:
 			self.beginVisitExprStmt(node)
 		elif node.type == 'funcdef':
 			self.beginVisitFuncdef(node)
-		elif node.type == 'parameters':
-			self.beginVisitParameters(node)
 		
 		if hasattr(node, 'children'):
 			for c in node.children:
@@ -261,8 +246,6 @@ class AstVisitor:
 			self.endVisitExprStmt(node)
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
-		elif node.type == 'parameters':
-			self.endVisitParameters(node)
 
 
 class VerboseAstVisitor(AstVisitor):
