@@ -7,7 +7,7 @@ import sourcetraildb as srctrl
 
 
 def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
-	sourceFilePath = "virtual_file.py"
+	sourceFilePath = 'virtual_file.py'
 
 	environment = jedi.api.environment.Environment(sys.executable)
 
@@ -35,7 +35,7 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
 
 
 def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbose):
-	sourceCode = ""
+	sourceCode = ''
 	with open(sourceFilePath, 'r') as input:
 		sourceCode=input.read()
 
@@ -66,7 +66,7 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 class AstVisitor:
 
 	sourceFilePath = None
-	sourceFileName = ""
+	sourceFileName = ''
 	sourceFileContent = None
 	client = None
 	contextSymbolIdStack = []
@@ -76,14 +76,14 @@ class AstVisitor:
 	def __init__(self, client, environment, sourceFilePath, sourceFileContent = None):
 		self.client = client
 		self.environment = environment
-		self.sourceFilePath = sourceFilePath.replace("\\", "/")
-		self.sourceFileName = self.sourceFilePath.rsplit("/", 1).pop()
+		self.sourceFilePath = sourceFilePath.replace('\\', '/')
+		self.sourceFileName = self.sourceFilePath.rsplit('/', 1).pop()
 		self.sourceFileContent = sourceFileContent
 		fileId = self.client.recordFile(self.sourceFilePath)
 		if not fileId:
-			print("ERROR: " + srctrl.getLastError())
+			print('ERROR: ' + srctrl.getLastError())
 		self.contextSymbolIdStack.append(fileId)
-		self.client.recordFileLanguage(fileId, "python")
+		self.client.recordFileLanguage(fileId, 'python')
 
 
 	def beginVisitName(self, node):
@@ -94,7 +94,7 @@ class AstVisitor:
 						# Early exit. For now we don't record references for names that don't have a valid definition location 
 						continue
 
-					if definition.type in ["class", "function"]:
+					if definition.type in ['class', 'function']:
 						(startLine, startColumn) = node.start_pos
 						if definition.line == startLine and definition.column == startColumn:
 							# Early exit. We don't record references for locations of names that are definitions
@@ -102,7 +102,7 @@ class AstVisitor:
 					
 						referenceId = -1
 
-						if definition.type == "class":
+						if definition.type == 'class':
 							referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name)
 
 							referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
@@ -117,7 +117,7 @@ class AstVisitor:
 							# Record symbol kind. If the used type is within indexed code, this is not really necessary. In any other case, this is valuable info!
 							self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_CLASS)
 
-						elif definition.type == "function":
+						elif definition.type == 'function':
 							if definition._name is not None and definition._name.tree_name is not None:
 								referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name)
 
@@ -128,8 +128,8 @@ class AstVisitor:
 
 								if True:
 									nextNode = getNext(node)
-									if nextNode is not None and nextNode.type == "trailer":
-										if len(nextNode.children) >= 2 and nextNode.children[0].value == "(" and nextNode.children[len(nextNode.children) - 1].value == ")":
+									if nextNode is not None and nextNode.type == 'trailer':
+										if len(nextNode.children) >= 2 and nextNode.children[0].value == '(' and nextNode.children[len(nextNode.children) - 1].value == ')':
 											referenceKind = srctrl.REFERENCE_CALL
 
 								if referenceKind is not -1:
@@ -145,18 +145,18 @@ class AstVisitor:
 						if referenceId == -1:
 							continue
 						elif referenceId == 0:
-							print("ERROR: " + srctrl.getLastError())
+							print('ERROR: ' + srctrl.getLastError())
 							continue
 						else:
 							self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
 							break # we just record usage of the first definition
 
-					elif definition.type in ["param", "statement"]:
+					elif definition.type in ['param', 'statement']:
 						localSymbolLocation = getParseLocationOfNode(node)
 						definitionLocation = getParseLocationOfNode(definition._name.tree_name)
 						localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, definitionLocation))
 						self.client.recordLocalSymbolLocation(localSymbolId, localSymbolLocation)
-						# don't break here, because local variables can have multiple definitions (e.g. one in "if" branch and one in "else" branch)
+						# don't break here, because local variables can have multiple definitions (e.g. one in 'if' branch and one in 'else' branch)
 
 
 	def endVisitName(self, node):
@@ -274,7 +274,7 @@ class AstVisitor:
 					if definition.type == 'param':
 						preceedingNode = definition._name.tree_name.parent.get_previous_sibling()
 						if preceedingNode is not None and preceedingNode.type == 'operator':
-							# "node" is the first parameter of a member function (aka. "self")
+							# 'node' is the first parameter of a member function (aka. 'self')
 							node = grandParentNode
 							parentNode =  getNamedParentNode(node)
 							nameNode = getFirstDirectChildWithType(node, 'name')
@@ -287,7 +287,7 @@ class AstVisitor:
 				parentNodeNameHierarchy.nameElements.append(nameElement)
 				return parentNodeNameHierarchy
 
-		return NameHierarchy(nameElement, ".")
+		return NameHierarchy(nameElement, '.')
 
 
 class VerboseAstVisitor(AstVisitor):
@@ -295,15 +295,15 @@ class VerboseAstVisitor(AstVisitor):
 	def __init__(self, client, environment, sourceFilePath, sourceFileContent = None):
 		AstVisitor.__init__(self, client, environment, sourceFilePath, sourceFileContent)
 		self.indentationLevel = 0
-		self.indentationToken = "| "
+		self.indentationToken = '| '
 
 
 	def traverseNode(self, node):
-		currentIndentation = ""
+		currentIndentation = ''
 		for i in range(0, self.indentationLevel):
 			currentIndentation += self.indentationToken
 
-		print("AST: " + currentIndentation + node.type)
+		print('AST: ' + currentIndentation + node.type)
 
 		self.indentationLevel += 1
 		AstVisitor.traverseNode(self, node)
@@ -316,11 +316,11 @@ class AstVisitorClient:
 
 	def __init__(self):
 		if srctrl.isCompatible():
-			print("Loaded database is compatible.")
+			print('Loaded database is compatible.')
 		else:
-			print("Loaded database is not compatible.")
-			print("Supported DB Version: " + str(srctrl.getSupportedDatabaseVersion()))
-			print("Loaded DB Version: " + str(srctrl.getLoadedDatabaseVersion()))
+			print('Loaded database is not compatible.')
+			print('Supported DB Version: ' + str(srctrl.getSupportedDatabaseVersion()))
+			print('Loaded DB Version: ' + str(srctrl.getLoadedDatabaseVersion()))
 
 
 	def recordSymbol(self, nameHierarchy):
@@ -390,7 +390,7 @@ class AstVisitorClient:
 
 	def recordFile(self, filePath):
 		self.indexedFileId = srctrl.recordFile(filePath)
-		srctrl.recordFileLanguage(self.indexedFileId, "python")
+		srctrl.recordFileLanguage(self.indexedFileId, 'python')
 		return self.indexedFileId
 
 
@@ -445,12 +445,12 @@ class ParseLocation:
 
 
 	def toString(self):
-		return "[" + str(self.startLine) + ":" + str(self.startColumn) + "|" + str(self.endLine) + ":" + str(self.endColumn) + "]"
+		return '[' + str(self.startLine) + ':' + str(self.startColumn) + '|' + str(self.endLine) + ':' + str(self.endColumn) + ']'
 
 
 class NameHierarchy():
 
-	delimiter = ""
+	delimiter = ''
 
 
 	def __init__(self, nameElement, delimiter):
@@ -463,14 +463,14 @@ class NameHierarchy():
 		return json.dumps(self, cls=NameHierarchyEncoder)
 
 	def getDisplayString(self):
-		displayString = ""
+		displayString = ''
 		isFirst = True
 		for nameElement in self.nameElements:
 			if not isFirst:
 				displayString += self.delimiter
 			isFirst = False
 			if len(nameElement.prefix) > 0:
-				displayString += nameElement.prefix + " " 
+				displayString += nameElement.prefix + ' ' 
 			displayString += nameElement.name
 			if len(nameElement.postfix) > 0:
 				displayString += nameElement.postfix 
@@ -479,12 +479,12 @@ class NameHierarchy():
 
 class NameElement:
 
-	name = ""
-	prefix = ""
-	postfix = ""
+	name = ''
+	prefix = ''
+	postfix = ''
 
 
-	def __init__(self, name, prefix = "", postfix = ""):
+	def __init__(self, name, prefix = '', postfix = ''):
 		self.name = name
 		self.prefix = prefix
 		self.postfix = postfix
@@ -495,8 +495,8 @@ class NameHierarchyEncoder(json.JSONEncoder):
 	def default(self, obj):
 		if isinstance(obj, NameHierarchy):
 			return {
-				"name_delimiter": obj.delimiter,
-				"name_elements": [nameElement.__dict__ for nameElement in obj.nameElements]
+				'name_delimiter': obj.delimiter,
+				'name_elements': [nameElement.__dict__ for nameElement in obj.nameElements]
 			}
 		# Let the base class default method raise the TypeError
 		return json.JSONEncoder.default(self, obj)
@@ -509,7 +509,7 @@ def getParseLocationOfNode(node):
 
 
 def getLocalSymbolName(sourceFileName, parseLocation):
-	return sourceFileName + "<" + str(parseLocation.startLine) + ":" + str(parseLocation.startColumn) + ">"
+	return sourceFileName + '<' + str(parseLocation.startLine) + ':' + str(parseLocation.startColumn) + '>'
 
 
 def getNamedParentNode(node):
@@ -553,7 +553,7 @@ def getDirectChildrenWithType(node, type):
 
 
 def getNext(node):
-	if hasattr(node, "children"):
+	if hasattr(node, 'children'):
 		for c in node.children:
 			return c
 
