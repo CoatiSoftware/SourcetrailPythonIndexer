@@ -148,12 +148,12 @@ class AstVisitor:
 							print('ERROR: ' + srctrl.getLastError())
 							continue
 						else:
-							self.client.recordReferenceLocation(referenceId, getParseLocationOfNode(node))
+							self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
 							break # we just record usage of the first definition
 
 					elif definition.type in ['param', 'statement']:
-						localSymbolLocation = getParseLocationOfNode(node)
-						definitionLocation = getParseLocationOfNode(definition._name.tree_name)
+						localSymbolLocation = getSourceRangeOfNode(node)
+						definitionLocation = getSourceRangeOfNode(definition._name.tree_name)
 						localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, definitionLocation))
 						self.client.recordLocalSymbolLocation(localSymbolId, localSymbolLocation)
 						# don't break here, because local variables can have multiple definitions (e.g. one in 'if' branch and one in 'else' branch)
@@ -168,8 +168,8 @@ class AstVisitor:
 		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
-		self.client.recordSymbolLocation(symbolId, getParseLocationOfNode(nameNode))
-		self.client.recordSymbolScopeLocation(symbolId, getParseLocationOfNode(node))
+		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
+		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
 		self.contextSymbolIdStack.append(symbolId)
 
 
@@ -185,7 +185,7 @@ class AstVisitor:
 				symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode))
 				self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 				self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
-				self.client.recordSymbolLocation(symbolId, getParseLocationOfNode(nameNode))
+				self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
 
 
 	def endVisitExprStmt(self, node):
@@ -197,8 +197,8 @@ class AstVisitor:
 		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
-		self.client.recordSymbolLocation(symbolId, getParseLocationOfNode(nameNode))
-		self.client.recordSymbolScopeLocation(symbolId, getParseLocationOfNode(node))
+		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
+		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
 		self.contextSymbolIdStack.append(symbolId)
 
 
@@ -336,36 +336,36 @@ class AstVisitorClient:
 		srctrl.recordSymbolKind(symbolId, symbolKind)
 
 
-	def recordSymbolLocation(self, symbolId, parseLocation):
+	def recordSymbolLocation(self, symbolId, sourceRange):
 		srctrl.recordSymbolLocation(
 			symbolId, 
 			self.indexedFileId, 
-			parseLocation.startLine, 
-			parseLocation.startColumn, 
-			parseLocation.endLine, 
-			parseLocation.endColumn
+			sourceRange.startLine, 
+			sourceRange.startColumn, 
+			sourceRange.endLine, 
+			sourceRange.endColumn
 		)
 
 
-	def recordSymbolScopeLocation(self, symbolId, parseLocation):
+	def recordSymbolScopeLocation(self, symbolId, sourceRange):
 		srctrl.recordSymbolScopeLocation(
 			symbolId, 
 			self.indexedFileId, 
-			parseLocation.startLine, 
-			parseLocation.startColumn, 
-			parseLocation.endLine, 
-			parseLocation.endColumn
+			sourceRange.startLine, 
+			sourceRange.startColumn, 
+			sourceRange.endLine, 
+			sourceRange.endColumn
 		)
 
 
-	def recordSymbolSignatureLocation(self, symbolId, parseLocation):
+	def recordSymbolSignatureLocation(self, symbolId, sourceRange):
 		srctrl.recordSymbolSignatureLocation(
 			symbolId, 
 			self.indexedFileId, 
-			parseLocation.startLine, 
-			parseLocation.startColumn, 
-			parseLocation.endLine, 
-			parseLocation.endColumn
+			sourceRange.startLine, 
+			sourceRange.startColumn, 
+			sourceRange.endLine, 
+			sourceRange.endColumn
 		)
 
 
@@ -377,14 +377,14 @@ class AstVisitorClient:
 		)
 
 
-	def recordReferenceLocation(self, referenceId, parseLocation):
+	def recordReferenceLocation(self, referenceId, sourceRange):
 		srctrl.recordReferenceLocation(
 			referenceId, 
 			self.indexedFileId, 
-			parseLocation.startLine, 
-			parseLocation.startColumn, 
-			parseLocation.endLine, 
-			parseLocation.endColumn
+			sourceRange.startLine, 
+			sourceRange.startColumn, 
+			sourceRange.endLine, 
+			sourceRange.endColumn
 		)
 
 
@@ -402,40 +402,40 @@ class AstVisitorClient:
 		return srctrl.recordLocalSymbol(name)
 
 
-	def recordLocalSymbolLocation(self, localSymbolId, parseLocation):
+	def recordLocalSymbolLocation(self, localSymbolId, sourceRange):
 		srctrl.recordLocalSymbolLocation(
 			localSymbolId, 
 			self.indexedFileId, 
-			parseLocation.startLine, 
-			parseLocation.startColumn, 
-			parseLocation.endLine, 
-			parseLocation.endColumn
+			sourceRange.startLine, 
+			sourceRange.startColumn, 
+			sourceRange.endLine, 
+			sourceRange.endColumn
 		)
 
 
-	def recordCommentLocation(self, parseLocation):
+	def recordCommentLocation(self, sourceRange):
 		srctrl.recordCommentLocation(
 			self.indexedFileId, 
-			parseLocation.startLine, 
-			parseLocation.startColumn, 
-			parseLocation.endLine, 
-			parseLocation.endColumn
+			sourceRange.startLine, 
+			sourceRange.startColumn, 
+			sourceRange.endLine, 
+			sourceRange.endColumn
 		)
 
 
-	def recordError(self, message, fatal, parseLocation):
+	def recordError(self, message, fatal, sourceRange):
 		srctrl.recordError(
 			message,
 			fatal, 
 			self.indexedFileId, 
-			parseLocation.startLine, 
-			parseLocation.startColumn, 
-			parseLocation.endLine, 
-			parseLocation.endColumn
+			sourceRange.startLine, 
+			sourceRange.startColumn, 
+			sourceRange.endLine, 
+			sourceRange.endColumn
 		)
 
 
-class ParseLocation:
+class SourceRange:
 
 	def __init__(self, startLine, startColumn, endLine, endColumn):
 		self.startLine = startLine
@@ -502,14 +502,14 @@ class NameHierarchyEncoder(json.JSONEncoder):
 		return json.JSONEncoder.default(self, obj)
 
 
-def getParseLocationOfNode(node):
+def getSourceRangeOfNode(node):
 	startLine, startColumn = node.start_pos
 	endLine, endColumn = node.end_pos
-	return ParseLocation(startLine, startColumn + 1, endLine, endColumn)
+	return SourceRange(startLine, startColumn + 1, endLine, endColumn)
 
 
-def getLocalSymbolName(sourceFileName, parseLocation):
-	return sourceFileName + '<' + str(parseLocation.startLine) + ':' + str(parseLocation.startColumn) + '>'
+def getLocalSymbolName(sourceFileName, sourceRange):
+	return sourceFileName + '<' + str(sourceRange.startLine) + ':' + str(sourceRange.startColumn) + '>'
 
 
 def getNamedParentNode(node):

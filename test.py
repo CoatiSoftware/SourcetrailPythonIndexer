@@ -238,19 +238,19 @@ class TestAstVisitorClient():
 			self.symbolIdsToData[symbolId]['symbol_kind'] = symbolKindToString(symbolKind)
 
 
-	def recordSymbolLocation(self, symbolId, parseLocation):
+	def recordSymbolLocation(self, symbolId, sourceRange):
 		if symbolId in self.symbolIdsToData:
-			self.symbolIdsToData[symbolId]['symbol_location'] = parseLocation.toString()
+			self.symbolIdsToData[symbolId]['symbol_location'] = sourceRange.toString()
 
 
-	def recordSymbolScopeLocation(self, symbolId, parseLocation):
+	def recordSymbolScopeLocation(self, symbolId, sourceRange):
 		if symbolId in self.symbolIdsToData:
-			self.symbolIdsToData[symbolId]['scope_location'] = parseLocation.toString()
+			self.symbolIdsToData[symbolId]['scope_location'] = sourceRange.toString()
 
 
-	def recordSymbolSignatureLocation(self, symbolId, parseLocation):
+	def recordSymbolSignatureLocation(self, symbolId, sourceRange):
 		if symbolId in self.symbolIdsToData:
-			self.symbolIdsToData[symbolId]['signature_location'] = parseLocation.toString()
+			self.symbolIdsToData[symbolId]['signature_location'] = sourceRange.toString()
 
 
 	def recordReference(self, contextSymbolId, referencedSymbolId, referenceKind):
@@ -269,9 +269,9 @@ class TestAstVisitorClient():
 		return referenceId
 
 
-	def recordReferenceLocation(self, referenceId, parseLocation):
+	def recordReferenceLocation(self, referenceId, sourceRange):
 		if referenceId in self.referenceIdsToData:
-			self.referenceIdsToData[referenceId]['reference_location'] = parseLocation.toString()
+			self.referenceIdsToData[referenceId]['reference_location'] = sourceRange.toString()
 
 
 	def recordFile(self, filePath):
@@ -310,17 +310,17 @@ class TestAstVisitorClient():
 		return localSymbolId
 
 
-	def recordLocalSymbolLocation(self, localSymbolId, parseLocation):
+	def recordLocalSymbolLocation(self, localSymbolId, sourceRange):
 		if localSymbolId in self.localSymbolIdsToData:
-			self.localSymbolIdsToData[localSymbolId]['local_symbol_locations'].append(parseLocation.toString())
+			self.localSymbolIdsToData[localSymbolId]['local_symbol_locations'].append(sourceRange.toString())
 
 
-	def recordCommentLocation(self, parseLocation):
+	def recordCommentLocation(self, sourceRange):
 		# FIXME: implement this one!
 		return
 
 
-	def recordError(self, message, fatal, parseLocation):
+	def recordError(self, message, fatal, sourceRange):
 		# FIXME: implement this one!
 		return
 
