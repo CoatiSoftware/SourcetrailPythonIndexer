@@ -88,30 +88,14 @@ class AstVisitor:
 
 	def beginVisitName(self, node):
 		if self.contextSymbolIdStack:
-			(startLine, startColumn) = node.start_pos
-			if self.sourceFileContent is None: # we are indexing a real file
-				script = jedi.Script(
-					source = None, 
-					line = startLine, 
-					column = startColumn, 
-					path = self.sourceFilePath, 
-					environment = self.environment
-				) # todo: provide a sys_path parameter here
-			else: # we are indexing a provided code snippet
-				script = jedi.Script(
-					source = self.sourceFileContent,
-					line = startLine, 
-					column = startColumn,
-					environment = self.environment
-				)
-			
-			for definition in script.goto_assignments(follow_imports=True):
+			for definition in self.getDefinitionsOfNode(node):
 				if definition is not None:
 					if not definition.line or not definition.column:
 						# Early exit. For now we don't record references for names that don't have a valid definition location 
 						continue
 
 					if definition.type in ["class", "function"]:
+						(startLine, startColumn) = node.start_pos
 						if definition.line == startLine and definition.column == startColumn:
 							# Early exit. We don't record references for locations of names that are definitions
 							continue
@@ -119,7 +103,7 @@ class AstVisitor:
 						referenceId = -1
 
 						if definition.type == "class":
-							referencedNameHierarchy = getNameHierarchyOfNode(definition._name.tree_name)
+							referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name)
 
 							referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 							contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
@@ -135,7 +119,7 @@ class AstVisitor:
 
 						elif definition.type == "function":
 							if definition._name is not None and definition._name.tree_name is not None:
-								referencedNameHierarchy = getNameHierarchyOfNode(definition._name.tree_name)
+								referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name)
 
 								referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 								contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
@@ -172,7 +156,7 @@ class AstVisitor:
 						definitionLocation = getParseLocationOfNode(definition._name.tree_name)
 						localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, definitionLocation))
 						self.client.recordLocalSymbolLocation(localSymbolId, localSymbolLocation)
-						# don't continue here, because local variables can have multiple definitions (e.g. one in "if" branch and one in "else" branch)
+						# don't break here, because local variables can have multiple definitions (e.g. one in "if" branch and one in "else" branch)
 
 
 	def endVisitName(self, node):
@@ -181,7 +165,7 @@ class AstVisitor:
 
 	def beginVisitClassdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(getNameHierarchyOfNode(node))
+		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
 		self.client.recordSymbolLocation(symbolId, getParseLocationOfNode(nameNode))
@@ -198,7 +182,7 @@ class AstVisitor:
 		if parentClassdefNode is not None:
 			definedNames = node.get_defined_names()
 			for nameNode in definedNames:
-				symbolId = self.client.recordSymbol(getNameHierarchyOfNode(nameNode))
+				symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode))
 				self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 				self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
 				self.client.recordSymbolLocation(symbolId, getParseLocationOfNode(nameNode))
@@ -210,7 +194,7 @@ class AstVisitor:
 
 	def beginVisitFuncdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(getNameHierarchyOfNode(node))
+		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
 		self.client.recordSymbolLocation(symbolId, getParseLocationOfNode(nameNode))
@@ -247,6 +231,63 @@ class AstVisitor:
 			self.endVisitExprStmt(node)
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
+
+
+	def getDefinitionsOfNode(self, node):
+		(startLine, startColumn) = node.start_pos
+		if self.sourceFileContent is None: # we are indexing a real file
+			script = jedi.Script(
+				source = None, 
+				line = startLine, 
+				column = startColumn, 
+				path = self.sourceFilePath, 
+				environment = self.environment
+			) # todo: provide a sys_path parameter here
+		else: # we are indexing a provided code snippet
+			script = jedi.Script(
+				source = self.sourceFileContent,
+				line = startLine, 
+				column = startColumn,
+				environment = self.environment
+			)
+		return script.goto_assignments(follow_imports=True)
+
+		
+	def getNameHierarchyOfNode(self, node):
+		if node is None:
+			return None
+
+		if node.type == 'name':
+			nameNode = node
+			parentNode = getNamedParentNode(node.parent)
+		else:
+			nameNode = getFirstDirectChildWithType(node, 'name')
+			parentNode = getNamedParentNode(node)
+
+		if nameNode is None:
+			return None
+
+		if parentNode is not None and parentNode.type == 'funcdef':
+			grandParentNode = getNamedParentNode(parentNode)
+			if grandParentNode is not None and grandParentNode.type == 'classdef':
+				for definition in self.getDefinitionsOfNode(node):
+					if definition.type == 'param':
+						preceedingNode = definition._name.tree_name.parent.get_previous_sibling()
+						if preceedingNode is not None and preceedingNode.type == 'operator':
+							# "node" is the first parameter of a member function (aka. "self")
+							node = grandParentNode
+							parentNode =  getNamedParentNode(node)
+							nameNode = getFirstDirectChildWithType(node, 'name')
+
+		nameElement = NameElement(nameNode.value)
+
+		if parentNode is not None:
+			parentNodeNameHierarchy = self.getNameHierarchyOfNode(parentNode)
+			if parentNodeNameHierarchy is not None:
+				parentNodeNameHierarchy.nameElements.append(nameElement)
+				return parentNodeNameHierarchy
+
+		return NameHierarchy(nameElement, ".")
 
 
 class VerboseAstVisitor(AstVisitor):
@@ -461,32 +502,6 @@ class NameHierarchyEncoder(json.JSONEncoder):
 		return json.JSONEncoder.default(self, obj)
 
 
-def getNameHierarchyOfNode(node):
-	if node == None:
-		return None
-
-	nameNode = None
-	if node.type == 'name':
-		nameNode = node
-	else:
-		nameNode = getFirstDirectChildWithType(node, 'name')
-	if nameNode == None:
-		return None
-	
-	nameElement = NameElement(nameNode.value)
-	parentNode = node.parent
-	if node.type == 'name':
-		if not parentNode == None:
-			parentNode = parentNode.parent
-	while not parentNode == None:
-		parentNodeNameHierarchy = getNameHierarchyOfNode(parentNode)
-		if not parentNodeNameHierarchy == None:
-			parentNodeNameHierarchy.nameElements.append(nameElement)
-			return parentNodeNameHierarchy
-		parentNode = parentNode.parent
-	return NameHierarchy(nameElement, ".")
-
-
 def getParseLocationOfNode(node):
 	startLine, startColumn = node.start_pos
 	endLine, endColumn = node.end_pos
@@ -495,6 +510,19 @@ def getParseLocationOfNode(node):
 
 def getLocalSymbolName(sourceFileName, parseLocation):
 	return sourceFileName + "<" + str(parseLocation.startLine) + ":" + str(parseLocation.startColumn) + ">"
+
+
+def getNamedParentNode(node):
+	if node is None:
+		return None
+	
+	parentNode = node.parent
+	while parentNode is not None:
+		if getFirstDirectChildWithType(parentNode, 'name') is not None:
+			return parentNode
+		parentNode = parentNode.parent
+
+	return None
 
 
 def getParentWithType(node, type):

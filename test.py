@@ -18,12 +18,21 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue("CLASS: Foo at [1:7|1:9] with scope [1:1|3:0]" in client.symbols)
 
 
-	def test_indexer_records_field_definition(self):
+	def test_indexer_records_static_field_definition(self):
 		client = self.indexSourceCode(
 			"class Foo:\n"
 			"	bar = None\n"
 		)
 		self.assertTrue("FIELD: Foo.bar at [2:2|2:4]" in client.symbols)
+
+
+	def test_indexer_records_non_static_field_definition(self):
+		client = self.indexSourceCode(
+			"class Foo:\n"
+			"	def bar(self):\n"
+			"		self.x = None\n"
+		)
+		self.assertTrue("FIELD: Foo.x at [3:8|3:8]" in client.symbols)
 
 
 # Test Recording Local Symbols
