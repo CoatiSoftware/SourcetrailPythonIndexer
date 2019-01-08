@@ -18,6 +18,15 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('CLASS: Foo at [1:7|1:9] with scope [1:1|3:0]' in client.symbols)
 
 
+	def test_indexer_records_member_function_definition(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def bar(self):\n'
+			'		pass\n'
+		)
+		self.assertTrue('FUNCTION: Foo.bar at [2:6|2:8] with scope [2:2|4:0]' in client.symbols)
+
+
 	def test_indexer_records_static_field_definition(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
