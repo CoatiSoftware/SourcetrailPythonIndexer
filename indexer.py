@@ -273,7 +273,7 @@ class AstVisitor:
 				for definition in self.getDefinitionsOfNode(node):
 					if definition.type == 'param':
 						preceedingNode = definition._name.tree_name.parent.get_previous_sibling()
-						if preceedingNode is not None and preceedingNode.type == 'operator':
+						if preceedingNode is not None and preceedingNode.type != 'param':
 							# 'node' is the first parameter of a member function (aka. 'self')
 							node = grandParentNode
 							parentNode =  getNamedParentNode(node)
