@@ -1,5 +1,5 @@
 # SourcetrailPythonIndexer
-Python Indexer for Sourcetrail based on jedi and SourcetrailDB
+Python Indexer for Sourcetrail based on [jedi](https://github.com/davidhalter/jedi), [parso](https://github.com/davidhalter/parso) and [SourcetrailDB](https://github.com/CoatiSoftware/SourcetrailDB)
 
 
 ## CI Pipelines
@@ -7,8 +7,9 @@ Windows: [![Build status](https://ci.appveyor.com/api/projects/status/4vo082swmh
 
 
 ## Requirements
-* [jedi](https://github.com/davidhalter/jedi) (v0.13.1)
-* [SourcetrailDB](https://github.com/CoatiSoftware/SourcetrailDB) for Python (v1)
+* [jedi 0.13.2](https://pypi.org/project/jedi/0.13.2)
+* [parso 0.3.1](https://pypi.org/project/parso/0.3.1)
+* [SourcetrailDB](https://github.com/CoatiSoftware/SourcetrailDB) for Python
 
 
 ## Setup

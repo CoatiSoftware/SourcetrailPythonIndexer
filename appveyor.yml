@@ -22,7 +22,8 @@ install:
         }
     - SET PIP_PATH=%PYTHON_PATH%/Scripts
     - SET PATH=%PYTHON_PATH%;%PIP_PATH%;%PATH%
-    - cmd: pip install jedi
+    - cmd: pip install parso==0.3.1
+    - cmd: pip install jedi==0.13.2
 
 
 build_script:
