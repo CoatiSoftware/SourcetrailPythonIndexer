@@ -101,14 +101,32 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('CALL: virtual_file.py -> main at [4:1|4:4]' in client.references)
 		
 
-	def test_indexer_records_usage_of_field_via_self(self):
+	def test_indexer_does_not_record_static_field_initialization_as_usage(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	x = 0\n'
+		)
+		for reference in client.references:
+			self.assertFalse(reference.startswith('USAGE: Foo -> Foo.x'))
+
+
+	def test_indexer_records_usage_of_static_field_via_self(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	x = 0\n'
+			'	def bar(self):\n'
+			'		y = self.x\n'
+		)
+		self.assertTrue('USAGE: Foo.bar -> Foo.x at [4:12|4:12]' in client.references)
+
+
+	def test_indexer_records_initialization_of_non_static_field_via_self_as_usage(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def bar(self):\n'
 			'		self.x = None\n'
-			'		y = self.x\n'
 		)
-		self.assertTrue('USAGE: Foo.bar -> Foo.x at [4:12|4:12]' in client.references)
+		self.assertTrue('USAGE: Foo.bar -> Foo.x at [3:8|3:8]' in client.references)
 
 
 	def indexSourceCode(self, sourceCode, verbose = False):

@@ -63,13 +63,18 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 	astVisitor.traverseNode(module_node)
 
 
+class ContextInfo:
+	def __init__(self, id, node):
+		self.id = id
+		self.node = node
+
 class AstVisitor:
 
 	sourceFilePath = None
 	sourceFileName = ''
 	sourceFileContent = None
 	client = None
-	contextSymbolIdStack = []
+	contextStack = []
 	environment = None
 
 
@@ -82,12 +87,12 @@ class AstVisitor:
 		fileId = self.client.recordFile(self.sourceFilePath)
 		if not fileId:
 			print('ERROR: ' + srctrl.getLastError())
-		self.contextSymbolIdStack.append(fileId)
+		self.contextStack.append(ContextInfo(fileId, None))
 		self.client.recordFileLanguage(fileId, 'python')
 
 
 	def beginVisitName(self, node):
-		if self.contextSymbolIdStack:
+		if len(self.contextStack) > 0:
 			for definition in self.getDefinitionsOfNode(node):
 				if definition is not None:
 					if not definition.line or not definition.column:
@@ -106,7 +111,7 @@ class AstVisitor:
 							referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name)
 
 							referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
-							contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
+							contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
 
 							referenceId = self.client.recordReference(
 								contextSymbolId,
@@ -122,7 +127,7 @@ class AstVisitor:
 								referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name)
 
 								referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
-								contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
+								contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
 								
 								referenceKind = -1
 
@@ -160,14 +165,28 @@ class AstVisitor:
 							if parentClassdefNode is not None:
 								definedNameNodes = parentExprStmtNode.get_defined_names()
 								if any(n.start_pos == node.start_pos and n.end_pos == node.end_pos for n in definedNameNodes):
+									# node is a definition of a class member variable
+									sourceRange = getSourceRangeOfNode(node)
+									# record the symbol definition
 									symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node))
 									self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 									self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
-									self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(node))
+									self.client.recordSymbolLocation(symbolId,sourceRange)
+
+									contextInfo = self.contextStack[len(self.contextStack) - 1]
+									if contextInfo.node.type != 'classdef':
+										# node is a definition of a non-static class member variable
+										referenceId = self.client.recordReference(
+											contextInfo.id,
+											symbolId,
+											srctrl.REFERENCE_USAGE
+										)
+										self.client.recordReferenceLocation(referenceId, sourceRange)
 									recordAsLocalSymbol = False
 									break
 								elif definitionNode in definedNameNodes:
-									contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
+									# node is a reference to a class member
+									contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
 									symbolNameHierarchy = self.getNameHierarchyOfNode(definitionNode)
 									referencedSymbolId = self.client.recordSymbol(symbolNameHierarchy)
 									referenceId = self.client.recordReference(
@@ -179,34 +198,6 @@ class AstVisitor:
 									recordAsLocalSymbol = False
 									break
 
-
-
-
-						# check if the node is NOT a local variable. in that case we record a symbol usage instead
-						if definition.type == 'statement' and node.parent is not None and node.parent.type == 'trailer' and not True:
-							potentialParamNode = getNamedParentNode(definitionNode) # TODO: check if these are None
-							for potentialParamDefinition in self.getDefinitionsOfNode(potentialParamNode):
-								if potentialParamDefinition is not None and potentialParamDefinition.type == 'param':
-									paramDefinitionNode = potentialParamDefinition._name.tree_name
-									potentialFuncdefNode = getNamedParentNode(paramDefinitionNode)
-									if potentialFuncdefNode is not None and potentialFuncdefNode.type == 'funcdef':
-										potentialClassdefNode = getNamedParentNode(potentialFuncdefNode)
-										if potentialClassdefNode is not None and potentialClassdefNode.type == 'classdef':
-											preceedingNode = paramDefinitionNode.parent.get_previous_sibling()
-											if preceedingNode is not None and preceedingNode.type != 'param':
-												# 'paramDefinitionNode' is the first parameter of a member function (aka. 'self')
-												contextSymbolId = self.contextSymbolIdStack[len(self.contextSymbolIdStack) - 1]
-												symbolNameHierarchy = self.getNameHierarchyOfNode(definitionNode)
-												referencedSymbolId = self.client.recordSymbol(symbolNameHierarchy)
-												referenceId = self.client.recordReference(
-													contextSymbolId,
-													referencedSymbolId,
-													srctrl.REFERENCE_USAGE
-												)
-												self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
-												recordAsLocalSymbol = False
-												break
-
 						if recordAsLocalSymbol:
 							localSymbolLocation = getSourceRangeOfNode(node)
 							definitionLocation = getSourceRangeOfNode(definition._name.tree_name)
@@ -216,7 +207,10 @@ class AstVisitor:
 
 
 	def endVisitName(self, node):
-		pass
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			if node == contextNode:
+				self.contextStack.pop()
 
 
 	def beginVisitClassdef(self, node):
@@ -226,19 +220,14 @@ class AstVisitor:
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
 		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
-		self.contextSymbolIdStack.append(symbolId)
+		self.contextStack.append(ContextInfo(symbolId, node))
 
 
 	def endVisitClassdef(self, node):
-		self.contextSymbolIdStack.pop()
-
-
-	def beginVisitExprStmt(self, node):
-		pass
-
-
-	def endVisitExprStmt(self, node):
-		pass
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			if node == contextNode:
+				self.contextStack.pop()
 
 
 	def beginVisitFuncdef(self, node):
@@ -248,11 +237,14 @@ class AstVisitor:
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
 		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
-		self.contextSymbolIdStack.append(symbolId)
+		self.contextStack.append(ContextInfo(symbolId, node))
 
 
 	def endVisitFuncdef(self, node):
-		self.contextSymbolIdStack.pop()
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			if node == contextNode:
+				self.contextStack.pop()
 
 
 	def traverseNode(self, node):
@@ -263,8 +255,6 @@ class AstVisitor:
 			self.beginVisitName(node)
 		elif node.type == 'classdef':
 			self.beginVisitClassdef(node)
-		elif node.type == 'expr_stmt':
-			self.beginVisitExprStmt(node)
 		elif node.type == 'funcdef':
 			self.beginVisitFuncdef(node)
 		
@@ -276,8 +266,6 @@ class AstVisitor:
 			self.endVisitName(node)
 		elif node.type == 'classdef':
 			self.endVisitClassdef(node)
-		elif node.type == 'expr_stmt':
-			self.endVisitExprStmt(node)
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
 
