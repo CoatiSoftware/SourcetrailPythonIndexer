@@ -8,6 +8,7 @@ def main():
 	parser = argparse.ArgumentParser(description='Index a Python source file and store the indexed data to a Sourcetrail database file.')
 	parser.add_argument('--database-file-path', help='path to the generated Sourcetrail database file', type=str, required=True)
 	parser.add_argument('--source-file-path', help='path to the source file to index', type=str, required=True)
+	parser.add_argument('--clear', help='clear the database before indexing', action='store_true', required=False)
 
 	args = parser.parse_args()
 	databaseFilePath = args.database_file_path
@@ -16,9 +17,13 @@ def main():
 
 	if not srctrl.open(databaseFilePath):
 		print('ERROR: ' + srctrl.getLastError())
-
-	if not srctrl.clear():
-		print('ERROR: ' + srctrl.getLastError())
+	
+	if args.clear:
+		print('Clearing database...')
+		if not srctrl.clear():
+			print('ERROR: ' + srctrl.getLastError())
+		else:
+			print('Clearing done.')
 
 	if srctrl.isEmpty():
 		print('Loaded database is empty.')
