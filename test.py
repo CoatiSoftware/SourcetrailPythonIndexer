@@ -99,6 +99,16 @@ class TestPythonIndexer(unittest.TestCase):
 			'main()\n'
 		)
 		self.assertTrue('CALL: virtual_file.py -> main at [4:1|4:4]' in client.references)
+		
+
+	def test_indexer_records_usage_of_field_via_self(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def bar(self):\n'
+			'		self.x = None\n'
+			'		y = self.x\n'
+		)
+		self.assertTrue('USAGE: Foo.bar -> Foo.x at [4:12|4:12]' in client.references)
 
 
 	def indexSourceCode(self, sourceCode, verbose = False):
