@@ -26,6 +26,17 @@ $ python run.py --source-file-path=your/python/file.py --database-file-path=your
 ```
 
 
+## Sourcetrail Integration
+To run the python indexer from within your Sourcetrail installation, follow these steps:
+* make sure that you are running Sourcetrail 2018.4.45 or a later version
+* add a new "Custom Command Source Group" to a new or to an existing project
+* paste the following string into the source group's "Custom Command" field: `python <path/to>/run.py --source-file-path=%{SOURCE_FILE_PATH} --database-file-path=%{DATABASE_FILE_PATH}`
+* replace `<path/to>` with the path where you checked out the SourcetrailPythonIndexer repository
+* add your Python files (or the folders that contain those files) to the "Files & Directories to Index" list
+* add a ".py" entry to the "Source File Extensions" list (including the dot)
+* confirm the settings and start the indexing process
+
+
 ## Executing the Tests
 To run the tests for this project, execute the command:
 ```
