@@ -93,7 +93,7 @@ class AstVisitor:
 
 	def beginVisitName(self, node):
 		if len(self.contextStack) > 0:
-			for definition in self.getDefinitionsOfNode(node):
+			for definition in self.getDefinitionsOfNode(node, self.sourceFilePath):
 				if definition is not None:
 					if not definition.line or not definition.column:
 						# Early exit. For now we don't record references for names that don't have a valid definition location 
@@ -108,7 +108,7 @@ class AstVisitor:
 						referenceId = -1
 
 						if definition.type == 'class':
-							referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name)
+							referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definition.module_path)
 
 							referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 							contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
@@ -124,7 +124,7 @@ class AstVisitor:
 
 						elif definition.type == 'function':
 							if definition._name is not None and definition._name.tree_name is not None:
-								referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name)
+								referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definition.module_path)
 
 								referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 								contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
@@ -168,7 +168,7 @@ class AstVisitor:
 									# node is a definition of a class member variable
 									sourceRange = getSourceRangeOfNode(node)
 									# record the symbol definition
-									symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node))
+									symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node, self.sourceFilePath))
 									self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 									self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
 									self.client.recordSymbolLocation(symbolId,sourceRange)
@@ -187,7 +187,7 @@ class AstVisitor:
 								elif definitionNode in definedNameNodes:
 									# node is a reference to a class member
 									contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
-									symbolNameHierarchy = self.getNameHierarchyOfNode(definitionNode)
+									symbolNameHierarchy = self.getNameHierarchyOfNode(definitionNode, definition.module_path)
 									referencedSymbolId = self.client.recordSymbol(symbolNameHierarchy)
 									referenceId = self.client.recordReference(
 										contextSymbolId,
@@ -215,7 +215,7 @@ class AstVisitor:
 
 	def beginVisitClassdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node))
+		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node, self.sourceFilePath))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
@@ -232,7 +232,7 @@ class AstVisitor:
 
 	def beginVisitFuncdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node))
+		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node, self.sourceFilePath))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
@@ -269,15 +269,14 @@ class AstVisitor:
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
 
-
-	def getDefinitionsOfNode(self, node):
+	def getDefinitionsOfNode(self, node, nodeSourceFilePath):
 		(startLine, startColumn) = node.start_pos
 		if self.sourceFileContent is None: # we are indexing a real file
 			script = jedi.Script(
 				source = None, 
 				line = startLine, 
 				column = startColumn, 
-				path = self.sourceFilePath, 
+				path = nodeSourceFilePath, 
 				environment = self.environment
 			) # todo: provide a sys_path parameter here
 		else: # we are indexing a provided code snippet
@@ -290,7 +289,7 @@ class AstVisitor:
 		return script.goto_assignments(follow_imports=True)
 
 		
-	def getNameHierarchyOfNode(self, node):
+	def getNameHierarchyOfNode(self, node, nodeSourceFilePath):
 		if node is None:
 			return None
 
@@ -307,7 +306,7 @@ class AstVisitor:
 		if parentNode is not None and parentNode.type == 'funcdef':
 			grandParentNode = getNamedParentNode(parentNode)
 			if grandParentNode is not None and grandParentNode.type == 'classdef':
-				for definition in self.getDefinitionsOfNode(node):
+				for definition in self.getDefinitionsOfNode(node, nodeSourceFilePath):
 					if definition.type == 'param':
 						preceedingNode = definition._name.tree_name.parent.get_previous_sibling()
 						if preceedingNode is not None and preceedingNode.type != 'param':
@@ -319,7 +318,7 @@ class AstVisitor:
 		nameElement = NameElement(nameNode.value)
 
 		if parentNode is not None:
-			parentNodeNameHierarchy = self.getNameHierarchyOfNode(parentNode)
+			parentNodeNameHierarchy = self.getNameHierarchyOfNode(parentNode, nodeSourceFilePath)
 			if parentNodeNameHierarchy is not None:
 				parentNodeNameHierarchy.nameElements.append(nameElement)
 				return parentNodeNameHierarchy
