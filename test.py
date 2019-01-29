@@ -10,12 +10,19 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording Symbols
 
+	def test_indexer_records_module_for_source_file(self):
+		client = self.indexSourceCode(
+			'\n'
+		)
+		self.assertTrue('MODULE: virtual_file' in client.symbols)
+
+
 	def test_indexer_records_class_definition(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	pass\n'
 		)
-		self.assertTrue('CLASS: Foo at [1:7|1:9] with scope [1:1|3:0]' in client.symbols)
+		self.assertTrue('CLASS: virtual_file.Foo at [1:7|1:9] with scope [1:1|3:0]' in client.symbols)
 
 
 	def test_indexer_records_member_function_definition(self):
@@ -24,7 +31,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'	def bar(self):\n'
 			'		pass\n'
 		)
-		self.assertTrue('FUNCTION: Foo.bar at [2:6|2:8] with scope [2:2|4:0]' in client.symbols)
+		self.assertTrue('FUNCTION: virtual_file.Foo.bar at [2:6|2:8] with scope [2:2|4:0]' in client.symbols)
 
 
 	def test_indexer_records_static_field_definition(self):
@@ -32,7 +39,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'class Foo:\n'
 			'	bar = None\n'
 		)
-		self.assertTrue('FIELD: Foo.bar at [2:2|2:4]' in client.symbols)
+		self.assertTrue('FIELD: virtual_file.Foo.bar at [2:2|2:4]' in client.symbols)
 
 
 	def test_indexer_records_non_static_field_definition(self):
@@ -41,7 +48,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'	def bar(self):\n'
 			'		self.x = None\n'
 		)
-		self.assertTrue('FIELD: Foo.x at [3:8|3:8]' in client.symbols)
+		self.assertTrue('FIELD: virtual_file.Foo.x at [3:8|3:8]' in client.symbols)
 
 
 # Test Recording Local Symbols
@@ -104,7 +111,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'\n'
 			'bar = Bar()\n'
 		)
-		self.assertTrue('TYPE_USAGE: virtual_file.py -> Bar at [4:7|4:9]' in client.references)
+		self.assertTrue('TYPE_USAGE: virtual_file.py -> virtual_file.Bar at [4:7|4:9]' in client.references)
 
 
 	def test_indexer_records_function_call(self):
@@ -114,7 +121,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'\n'
 			'main()\n'
 		)
-		self.assertTrue('CALL: virtual_file.py -> main at [4:1|4:4]' in client.references)
+		self.assertTrue('CALL: virtual_file.py -> virtual_file.main at [4:1|4:4]' in client.references)
 
 
 	def test_indexer_does_not_record_static_field_initialization_as_usage(self):
@@ -123,7 +130,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'	x = 0\n'
 		)
 		for reference in client.references:
-			self.assertFalse(reference.startswith('USAGE: Foo -> Foo.x'))
+			self.assertFalse(reference.startswith('USAGE: virtual_file.Foo -> virtual_file.Foo.x'))
 
 
 	def test_indexer_records_usage_of_static_field_via_self(self):
@@ -133,7 +140,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'	def bar(self):\n'
 			'		y = self.x\n'
 		)
-		self.assertTrue('USAGE: Foo.bar -> Foo.x at [4:12|4:12]' in client.references)
+		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [4:12|4:12]' in client.references)
 
 
 	def test_indexer_records_initialization_of_non_static_field_via_self_as_usage(self):
@@ -142,7 +149,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'	def bar(self):\n'
 			'		self.x = None\n'
 		)
-		self.assertTrue('USAGE: Foo.bar -> Foo.x at [3:8|3:8]' in client.references)
+		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [3:8|3:8]' in client.references)
 
 
 	def indexSourceCode(self, sourceCode, verbose = False):
@@ -381,6 +388,8 @@ def symbolKindToString(symbolKind):
 		return 'TYPE'
 	if symbolKind == srctrl.SYMBOL_BUILTIN_TYPE:
 		return 'BUILTIN_TYPE'
+	if symbolKind == srctrl.SYMBOL_MODULE:
+		return 'MODULE'
 	if symbolKind == srctrl.SYMBOL_NAMESPACE:
 		return 'NAMESPACE'
 	if symbolKind == srctrl.SYMBOL_PACKAGE:

@@ -78,12 +78,18 @@ class AstVisitor:
 		self.sourceFilePath = sourceFilePath.replace('\\', '/')
 		self.sourceFileName = self.sourceFilePath.rsplit('/', 1).pop()
 		self.sourceFileContent = sourceFileContent
+		self.contextStack = []
+
 		fileId = self.client.recordFile(self.sourceFilePath)
 		if not fileId:
 			print('ERROR: ' + srctrl.getLastError())
-		self.contextStack = []
-		self.contextStack.append(ContextInfo(fileId, None))
 		self.client.recordFileLanguage(fileId, 'python')
+
+		moduleId = self.client.recordSymbol(NameHierarchy(NameElement(getModuleNameForFilePath(self.sourceFilePath)), "."))
+		self.client.recordSymbolDefinitionKind(moduleId, srctrl.DEFINITION_EXPLICIT)
+		self.client.recordSymbolKind(moduleId, srctrl.SYMBOL_MODULE)
+
+		self.contextStack.append(ContextInfo(fileId, None))
 
 
 	def beginVisitName(self, node):
@@ -94,6 +100,10 @@ class AstVisitor:
 						# Early exit. For now we don't record references for names that don't have a valid definition location
 						continue
 
+					definitionModulePath = definition.module_path
+					if definitionModulePath is None:
+						definitionModulePath = self.sourceFilePath
+
 					if definition.type in ['class', 'function']:
 						(startLine, startColumn) = node.start_pos
 						if definition.line == startLine and definition.column == startColumn:
@@ -103,7 +113,7 @@ class AstVisitor:
 						referenceId = -1
 
 						if definition.type == 'class':
-							referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definition.module_path)
+							referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definitionModulePath)
 
 							referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 							contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
@@ -119,7 +129,7 @@ class AstVisitor:
 
 						elif definition.type == 'function':
 							if definition._name is not None and definition._name.tree_name is not None:
-								referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definition.module_path)
+								referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definitionModulePath)
 
 								referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 								contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
@@ -173,7 +183,7 @@ class AstVisitor:
 									# definition is may be a non-static member variable
 									if definitionNode.parent is not None and definitionNode.parent.type == 'trailer':
 										potentialParamNode = getNamedParentNode(definitionNode) # TODO: check if these are None
-										for potentialParamDefinition in self.getDefinitionsOfNode(potentialParamNode, definition.module_path):
+										for potentialParamDefinition in self.getDefinitionsOfNode(potentialParamNode, definitionModulePath):
 											if potentialParamDefinition is not None and potentialParamDefinition.type == 'param':
 												paramDefinitionNode = potentialParamDefinition._name.tree_name
 												potentialFuncdefNode = getNamedParentNode(paramDefinitionNode)
@@ -193,13 +203,13 @@ class AstVisitor:
 
 						if recordAsSymbol or recordAsReference:
 							if recordAsSymbol:
-								symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(definitionNode, definition.module_path))
+								symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(definitionNode, definitionModulePath))
 								self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 								self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
 								self.client.recordSymbolLocation(symbolId, sourceRange)
 
 							if recordAsReference:
-								symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(definitionNode, definition.module_path))
+								symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(definitionNode, definitionModulePath))
 								contextInfo = self.contextStack[len(self.contextStack) - 1]
 								referenceId = self.client.recordReference(
 									contextInfo.id,
@@ -212,7 +222,7 @@ class AstVisitor:
 						elif recordAsLocalSymbol:
 							localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, getSourceRangeOfNode(definitionNode)))
 							self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
-							# don't break here, because local variables can have multiple definitions (e.g. one in 'if' branch and one in 'else' branch)
+							# don't break here, because local variables can have multiple definitions (e.g. one in 'if' branch and one in 'else' branch) TODO: write test for this
 
 
 	def endVisitName(self, node):
@@ -333,7 +343,9 @@ class AstVisitor:
 				parentNodeNameHierarchy.nameElements.append(nameElement)
 				return parentNodeNameHierarchy
 
-		return NameHierarchy(nameElement, '.')
+		nameHierarchy = NameHierarchy(NameElement(getModuleNameForFilePath(nodeSourceFilePath)), '.')
+		nameHierarchy.nameElements.append(nameElement)
+		return nameHierarchy
 
 
 class VerboseAstVisitor(AstVisitor):
@@ -539,6 +551,13 @@ class NameHierarchyEncoder(json.JSONEncoder):
 			}
 		# Let the base class default method raise the TypeError
 		return json.JSONEncoder.default(self, obj)
+
+
+def getModuleNameForFilePath(filePath):
+	filePath = filePath.replace('\\', '/') # convert slashes
+	fileName = filePath.rsplit('/', 1).pop() # remove path
+	moduleName = fileName.rsplit('.', 1)[0] # remove extension
+	return moduleName
 
 
 def getSourceRangeOfNode(node):
