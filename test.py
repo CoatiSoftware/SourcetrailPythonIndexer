@@ -62,7 +62,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.py<1:9> at [2:6|2:8]' in client.localSymbols)
 
 
-	def test_indexer_records_variable_as_local_symbol(self):
+	def test_indexer_records_function_scope_variable_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'def foo():\n'
 			'	x = 5\n'
@@ -77,6 +77,15 @@ class TestPythonIndexer(unittest.TestCase):
 			'	y = x\n'
 		)
 		self.assertTrue('virtual_file.py<2:2> at [3:6|3:6]' in client.localSymbols)
+
+
+	def test_indexer_records_method_scope_variable_as_local_symbol(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def bar(self):\n'
+			'		baz = 6\n'
+		)
+		self.assertTrue('virtual_file.py<3:3> at [3:3|3:5]' in client.localSymbols)
 
 
 # Test Recording References

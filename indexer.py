@@ -102,7 +102,7 @@ class AstVisitor:
 					if definition.type in ['class', 'function']:
 						(startLine, startColumn) = node.start_pos
 						if definition.line == startLine and definition.column == startColumn:
-							# Early exit. We don't record references for locations of names that are definitions
+							# Early exit. We don't record references for locations of classes or functions that are definitions
 							continue
 					
 						referenceId = -1
@@ -158,51 +158,64 @@ class AstVisitor:
 
 					elif definition.type in ['param', 'statement']:
 						recordAsLocalSymbol = True
+						recordAsSymbol = False
+						recordAsReference = False
 						definitionNode = definition._name.tree_name
-						parentExprStmtNode = getParentWithType(definitionNode, 'expr_stmt')
-						if parentExprStmtNode is not None:
-							parentClassdefNode = getParentWithType(parentExprStmtNode, 'classdef')
-							if parentClassdefNode is not None:
-								definedNameNodes = parentExprStmtNode.get_defined_names()
-								if any(n.start_pos == node.start_pos and n.end_pos == node.end_pos for n in definedNameNodes):
-									# node is a definition of a class member variable
-									sourceRange = getSourceRangeOfNode(node)
-									# record the symbol definition
-									symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node, self.sourceFilePath))
-									self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
-									self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
-									self.client.recordSymbolLocation(symbolId,sourceRange)
 
-									contextInfo = self.contextStack[len(self.contextStack) - 1]
-									if contextInfo.node.type != 'classdef':
-										# node is a definition of a non-static class member variable
-										referenceId = self.client.recordReference(
-											contextInfo.id,
-											symbolId,
-											srctrl.REFERENCE_USAGE
-										)
-										self.client.recordReferenceLocation(referenceId, sourceRange)
-									recordAsLocalSymbol = False
-									break
-								elif definitionNode in definedNameNodes:
-									# node is a reference to a class member
-									contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
-									symbolNameHierarchy = self.getNameHierarchyOfNode(definitionNode, definition.module_path)
-									referencedSymbolId = self.client.recordSymbol(symbolNameHierarchy)
-									referenceId = self.client.recordReference(
-										contextSymbolId,
-										referencedSymbolId,
-										srctrl.REFERENCE_USAGE
-									)
-									self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
-									recordAsLocalSymbol = False
-									break
+						if definition.type == 'statement':
+							namedDefinitionParentNode = getParentWithTypeInList(definitionNode, ['classdef', 'funcdef'])
+							if namedDefinitionParentNode.type in ['classdef']:
+								# definition is a static member variable
+								recordAsLocalSymbol = False
+								if definitionNode.start_pos == node.start_pos and definitionNode.end_pos == node.end_pos:
+									recordAsSymbol = True
+									recordAsReference = False
+								else:
+									recordAsSymbol = False
+									recordAsReference = True
+							elif namedDefinitionParentNode.type in ['funcdef']:
+								# definition is may be a non-static member variable
+								if definitionNode.parent is not None and definitionNode.parent.type == 'trailer':
+									potentialParamNode = getNamedParentNode(definitionNode) # TODO: check if these are None
+									for potentialParamDefinition in self.getDefinitionsOfNode(potentialParamNode, definition.module_path):
+										if potentialParamDefinition is not None and potentialParamDefinition.type == 'param':
+											paramDefinitionNode = potentialParamDefinition._name.tree_name
+											potentialFuncdefNode = getNamedParentNode(paramDefinitionNode)
+											if potentialFuncdefNode is not None and potentialFuncdefNode.type == 'funcdef':
+												potentialClassdefNode = getNamedParentNode(potentialFuncdefNode)
+												if potentialClassdefNode is not None and potentialClassdefNode.type == 'classdef':
+													preceedingNode = paramDefinitionNode.parent.get_previous_sibling()
+													if preceedingNode is not None and preceedingNode.type != 'param':
+														# 'paramDefinitionNode' is the first parameter of a member function (aka. 'self')
+														recordAsReference = True
+														if definitionNode.start_pos == node.start_pos and definitionNode.end_pos == node.end_pos:
+															recordAsSymbol = True
+														else:
+															recordAsSymbol = False
+						
+						sourceRange = getSourceRangeOfNode(node)
 
-						if recordAsLocalSymbol:
-							localSymbolLocation = getSourceRangeOfNode(node)
-							definitionLocation = getSourceRangeOfNode(definition._name.tree_name)
-							localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, definitionLocation))
-							self.client.recordLocalSymbolLocation(localSymbolId, localSymbolLocation)
+						if recordAsSymbol or recordAsReference:
+							if recordAsSymbol:
+								symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(definitionNode, definition.module_path))
+								self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
+								self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
+								self.client.recordSymbolLocation(symbolId, sourceRange)
+
+							if recordAsReference:
+								symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(definitionNode, definition.module_path))
+								contextInfo = self.contextStack[len(self.contextStack) - 1]
+								referenceId = self.client.recordReference(
+									contextInfo.id,
+									symbolId,
+									srctrl.REFERENCE_USAGE
+								)
+								self.client.recordReferenceLocation(referenceId, sourceRange)
+							break
+									
+						elif recordAsLocalSymbol:
+							localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, getSourceRangeOfNode(definitionNode)))
+							self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
 							# don't break here, because local variables can have multiple definitions (e.g. one in 'if' branch and one in 'else' branch)
 
 
@@ -574,6 +587,17 @@ def getParentWithType(node, type):
 	if parentNode.type == type:
 		return parentNode
 	return getParentWithType(parentNode, type)
+
+	
+def getParentWithTypeInList(node, typeList):
+	if node == None:
+		return None
+	parentNode = node.parent
+	if parentNode == None:
+		return None
+	if parentNode.type in typeList:
+		return parentNode
+	return getParentWithTypeInList(parentNode, typeList)
 	
 
 
