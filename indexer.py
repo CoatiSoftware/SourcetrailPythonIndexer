@@ -64,19 +64,13 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 
 
 class ContextInfo:
+
 	def __init__(self, id, node):
 		self.id = id
 		self.node = node
 
+
 class AstVisitor:
-
-	sourceFilePath = None
-	sourceFileName = ''
-	sourceFileContent = None
-	client = None
-	contextStack = []
-	environment = None
-
 
 	def __init__(self, client, environment, sourceFilePath, sourceFileContent = None):
 		self.client = client
@@ -87,6 +81,7 @@ class AstVisitor:
 		fileId = self.client.recordFile(self.sourceFilePath)
 		if not fileId:
 			print('ERROR: ' + srctrl.getLastError())
+		self.contextStack = []
 		self.contextStack.append(ContextInfo(fileId, None))
 		self.client.recordFileLanguage(fileId, 'python')
 
@@ -361,9 +356,8 @@ class VerboseAstVisitor(AstVisitor):
 
 class AstVisitorClient:
 
-	indexedFileId = 0
-
 	def __init__(self):
+		self.indexedFileId = 0
 		if srctrl.isCompatible():
 			print('Loaded database is compatible.')
 		else:
@@ -499,9 +493,6 @@ class SourceRange:
 
 class NameHierarchy():
 
-	delimiter = ''
-
-
 	def __init__(self, nameElement, delimiter):
 		self.nameElements = []
 		if not nameElement == None:
@@ -527,11 +518,6 @@ class NameHierarchy():
 
 
 class NameElement:
-
-	name = ''
-	prefix = ''
-	postfix = ''
-
 
 	def __init__(self, name, prefix = '', postfix = ''):
 		self.name = name
@@ -598,7 +584,6 @@ def getParentWithTypeInList(node, typeList):
 	if parentNode.type in typeList:
 		return parentNode
 	return getParentWithTypeInList(parentNode, typeList)
-	
 
 
 def getFirstDirectChildWithType(node, type):
@@ -607,7 +592,7 @@ def getFirstDirectChildWithType(node, type):
 			return c
 	return None
 
-	
+
 def getDirectChildrenWithType(node, type):
 	children = []
 	for c in node.children:
@@ -629,4 +614,3 @@ def getNext(node):
 		siblingSource = siblingSource.parent
 
 	return None
-	
