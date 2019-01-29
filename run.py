@@ -18,7 +18,7 @@ def main():
 
 	if not srctrl.open(databaseFilePath):
 		print('ERROR: ' + srctrl.getLastError())
-	
+
 	if args.clear:
 		if args.verbose:
 			print('Clearing database...')

@@ -14,7 +14,7 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
 	project = jedi.api.project.Project(workingDirectory)
 
 	evaluator = jedi.evaluate.Evaluator(
-		project, 
+		project,
 		environment=environment,
 		script_path=workingDirectory
 	)
@@ -27,9 +27,9 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
 	)
 
 	if (isVerbose):
-		astVisitor = VerboseAstVisitor(astVisitorClient, environment, sourceFilePath, sourceCode) 
+		astVisitor = VerboseAstVisitor(astVisitorClient, environment, sourceFilePath, sourceCode)
 	else:
-		astVisitor = AstVisitor(astVisitorClient, environment, sourceFilePath, sourceCode) 
+		astVisitor = AstVisitor(astVisitorClient, environment, sourceFilePath, sourceCode)
 
 	astVisitor.traverseNode(module_node)
 
@@ -43,7 +43,7 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 	environment = project.get_environment()
 
 	evaluator = jedi.evaluate.Evaluator(
-		project, 
+		project,
 		environment=environment,
 		script_path=workingDirectory
 	)
@@ -56,9 +56,9 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 	)
 
 	if (isVerbose):
-		astVisitor = VerboseAstVisitor(astVisitorClient, environment, sourceFilePath) 
+		astVisitor = VerboseAstVisitor(astVisitorClient, environment, sourceFilePath)
 	else:
-		astVisitor = AstVisitor(astVisitorClient, environment, sourceFilePath) 
+		astVisitor = AstVisitor(astVisitorClient, environment, sourceFilePath)
 
 	astVisitor.traverseNode(module_node)
 
@@ -91,7 +91,7 @@ class AstVisitor:
 			for definition in self.getDefinitionsOfNode(node, self.sourceFilePath):
 				if definition is not None:
 					if not definition.line or not definition.column:
-						# Early exit. For now we don't record references for names that don't have a valid definition location 
+						# Early exit. For now we don't record references for names that don't have a valid definition location
 						continue
 
 					if definition.type in ['class', 'function']:
@@ -99,7 +99,7 @@ class AstVisitor:
 						if definition.line == startLine and definition.column == startColumn:
 							# Early exit. We don't record references for locations of classes or functions that are definitions
 							continue
-					
+
 						referenceId = -1
 
 						if definition.type == 'class':
@@ -123,7 +123,7 @@ class AstVisitor:
 
 								referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 								contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
-								
+
 								referenceKind = -1
 
 								if True:
@@ -138,7 +138,7 @@ class AstVisitor:
 										referencedSymbolId,
 										referenceKind
 									)
-								
+
 								# Record symbol kind. If the called function is within indexed code, this is not really necessary. In any other case, this is valuable info!
 								self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_FUNCTION)
 
@@ -187,7 +187,7 @@ class AstVisitor:
 															recordAsSymbol = True
 														else:
 															recordAsSymbol = False
-						
+
 						sourceRange = getSourceRangeOfNode(node)
 
 						if recordAsSymbol or recordAsReference:
@@ -207,7 +207,7 @@ class AstVisitor:
 								)
 								self.client.recordReferenceLocation(referenceId, sourceRange)
 							break
-									
+
 						elif recordAsLocalSymbol:
 							localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, getSourceRangeOfNode(definitionNode)))
 							self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
@@ -258,14 +258,14 @@ class AstVisitor:
 	def traverseNode(self, node):
 		if not node:
 			return
-		
+
 		if node.type == 'name':
 			self.beginVisitName(node)
 		elif node.type == 'classdef':
 			self.beginVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.beginVisitFuncdef(node)
-		
+
 		if hasattr(node, 'children'):
 			for c in node.children:
 				self.traverseNode(c)
@@ -277,26 +277,27 @@ class AstVisitor:
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
 
+
 	def getDefinitionsOfNode(self, node, nodeSourceFilePath):
 		(startLine, startColumn) = node.start_pos
 		if self.sourceFileContent is None: # we are indexing a real file
 			script = jedi.Script(
-				source = None, 
-				line = startLine, 
-				column = startColumn, 
-				path = nodeSourceFilePath, 
+				source = None,
+				line = startLine,
+				column = startColumn,
+				path = nodeSourceFilePath,
 				environment = self.environment
 			) # todo: provide a sys_path parameter here
 		else: # we are indexing a provided code snippet
 			script = jedi.Script(
 				source = self.sourceFileContent,
-				line = startLine, 
+				line = startLine,
 				column = startColumn,
 				environment = self.environment
 			)
 		return script.goto_assignments(follow_imports=True)
 
-		
+
 	def getNameHierarchyOfNode(self, node, nodeSourceFilePath):
 		if node is None:
 			return None
@@ -381,33 +382,33 @@ class AstVisitorClient:
 
 	def recordSymbolLocation(self, symbolId, sourceRange):
 		srctrl.recordSymbolLocation(
-			symbolId, 
-			self.indexedFileId, 
-			sourceRange.startLine, 
-			sourceRange.startColumn, 
-			sourceRange.endLine, 
+			symbolId,
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
 			sourceRange.endColumn
 		)
 
 
 	def recordSymbolScopeLocation(self, symbolId, sourceRange):
 		srctrl.recordSymbolScopeLocation(
-			symbolId, 
-			self.indexedFileId, 
-			sourceRange.startLine, 
-			sourceRange.startColumn, 
-			sourceRange.endLine, 
+			symbolId,
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
 			sourceRange.endColumn
 		)
 
 
 	def recordSymbolSignatureLocation(self, symbolId, sourceRange):
 		srctrl.recordSymbolSignatureLocation(
-			symbolId, 
-			self.indexedFileId, 
-			sourceRange.startLine, 
-			sourceRange.startColumn, 
-			sourceRange.endLine, 
+			symbolId,
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
 			sourceRange.endColumn
 		)
 
@@ -415,18 +416,18 @@ class AstVisitorClient:
 	def recordReference(self, contextSymbolId, referencedSymbolId, referenceKind):
 		return srctrl.recordReference(
 			contextSymbolId,
-			referencedSymbolId, 
+			referencedSymbolId,
 			referenceKind
 		)
 
 
 	def recordReferenceLocation(self, referenceId, sourceRange):
 		srctrl.recordReferenceLocation(
-			referenceId, 
-			self.indexedFileId, 
-			sourceRange.startLine, 
-			sourceRange.startColumn, 
-			sourceRange.endLine, 
+			referenceId,
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
 			sourceRange.endColumn
 		)
 
@@ -447,21 +448,21 @@ class AstVisitorClient:
 
 	def recordLocalSymbolLocation(self, localSymbolId, sourceRange):
 		srctrl.recordLocalSymbolLocation(
-			localSymbolId, 
-			self.indexedFileId, 
-			sourceRange.startLine, 
-			sourceRange.startColumn, 
-			sourceRange.endLine, 
+			localSymbolId,
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
 			sourceRange.endColumn
 		)
 
 
 	def recordCommentLocation(self, sourceRange):
 		srctrl.recordCommentLocation(
-			self.indexedFileId, 
-			sourceRange.startLine, 
-			sourceRange.startColumn, 
-			sourceRange.endLine, 
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
 			sourceRange.endColumn
 		)
 
@@ -469,11 +470,11 @@ class AstVisitorClient:
 	def recordError(self, message, fatal, sourceRange):
 		srctrl.recordError(
 			message,
-			fatal, 
-			self.indexedFileId, 
-			sourceRange.startLine, 
-			sourceRange.startColumn, 
-			sourceRange.endLine, 
+			fatal,
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
 			sourceRange.endColumn
 		)
 
@@ -499,8 +500,10 @@ class NameHierarchy():
 			self.nameElements.append(nameElement)
 		self.delimiter = delimiter
 
+
 	def serialize(self):
 		return json.dumps(self, cls=NameHierarchyEncoder)
+
 
 	def getDisplayString(self):
 		displayString = ''
@@ -510,10 +513,10 @@ class NameHierarchy():
 				displayString += self.delimiter
 			isFirst = False
 			if len(nameElement.prefix) > 0:
-				displayString += nameElement.prefix + ' ' 
+				displayString += nameElement.prefix + ' '
 			displayString += nameElement.name
 			if len(nameElement.postfix) > 0:
-				displayString += nameElement.postfix 
+				displayString += nameElement.postfix
 		return displayString
 
 
@@ -526,7 +529,7 @@ class NameElement:
 
 
 class NameHierarchyEncoder(json.JSONEncoder):
-	
+
 	def default(self, obj):
 		if isinstance(obj, NameHierarchy):
 			return {
@@ -550,7 +553,7 @@ def getLocalSymbolName(sourceFileName, sourceRange):
 def getNamedParentNode(node):
 	if node is None:
 		return None
-	
+
 	parentNode = node.parent
 
 	if node.type == 'name' and parentNode is not None:
@@ -574,7 +577,7 @@ def getParentWithType(node, type):
 		return parentNode
 	return getParentWithType(parentNode, type)
 
-	
+
 def getParentWithTypeInList(node, typeList):
 	if node == None:
 		return None

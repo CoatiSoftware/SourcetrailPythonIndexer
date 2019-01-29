@@ -108,7 +108,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'main()\n'
 		)
 		self.assertTrue('CALL: virtual_file.py -> main at [4:1|4:4]' in client.references)
-		
+
 
 	def test_indexer_does_not_record_static_field_initialization_as_usage(self):
 		client = self.indexSourceCode(
@@ -144,8 +144,8 @@ class TestPythonIndexer(unittest.TestCase):
 
 		indexer.indexSourceCode(
 			sourceCode,
-			workingDirectory, 
-			astVisitorClient, 
+			workingDirectory,
+			astVisitorClient,
 			verbose
 		)
 
@@ -175,16 +175,16 @@ class TestAstVisitorClient():
 		self.symbols = []
 		for key in self.symbolIdsToData:
 			symbolString = ''
-			
+
 			if 'definition_kind' in self.symbolIdsToData[key]:
-				symbolString += self.symbolIdsToData[key]['definition_kind'] + ' ' 
+				symbolString += self.symbolIdsToData[key]['definition_kind'] + ' '
 			else:
-				symbolString += 'NON-INDEXED ' 
+				symbolString += 'NON-INDEXED '
 
 			if 'symbol_kind' in self.symbolIdsToData[key]:
-				symbolString += self.symbolIdsToData[key]['symbol_kind'] + ': ' 
+				symbolString += self.symbolIdsToData[key]['symbol_kind'] + ': '
 			else:
-				symbolString += 'SYMBOL: ' 
+				symbolString += 'SYMBOL: '
 
 			if 'name' in self.symbolIdsToData[key]:
 				symbolString += self.symbolIdsToData[key]['name']
@@ -210,30 +210,30 @@ class TestAstVisitorClient():
 			if 'name' in self.localSymbolIdsToData[key]:
 				localSymbolString += self.localSymbolIdsToData[key]['name']
 
-			if localSymbolString and 'local_symbol_locations' in self.localSymbolIdsToData[key]:	
+			if localSymbolString and 'local_symbol_locations' in self.localSymbolIdsToData[key]:
 				for location in self.localSymbolIdsToData[key]['local_symbol_locations']:
 					self.localSymbols.append(localSymbolString + ' at ' + location)
-		
+
 		self.references = []
 		for key in self.referenceIdsToData:
 			referenceString = ''
-			
+
 			if 'reference_kind' in self.referenceIdsToData[key]:
-				referenceString += self.referenceIdsToData[key]['reference_kind'] + ': ' 
+				referenceString += self.referenceIdsToData[key]['reference_kind'] + ': '
 			else:
-				referenceString += 'REFERENCE: ' 
+				referenceString += 'REFERENCE: '
 
 			if 'context_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['context_symbol_id'] in self.symbolIdsToData:
 				referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['context_symbol_id']]['name']
 			else:
-				referenceString += 'UNKNOWN SYMBOL' 
+				referenceString += 'UNKNOWN SYMBOL'
 
 			referenceString += ' -> '
-			
+
 			if 'referenced_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['referenced_symbol_id'] in self.symbolIdsToData:
 				referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['referenced_symbol_id']]['name']
 			else:
-				referenceString += 'UNKNOWN SYMBOL' 
+				referenceString += 'UNKNOWN SYMBOL'
 
 			if 'reference_location' in self.referenceIdsToData[key]:
 				referenceString += ' at ' + self.referenceIdsToData[key]['reference_location']
@@ -249,7 +249,7 @@ class TestAstVisitorClient():
 		self.nextSymbolId += 1
 		return id
 
-		
+
 	def recordSymbol(self, nameHierarchy):
 		serialized = nameHierarchy.serialize()
 
@@ -258,8 +258,8 @@ class TestAstVisitorClient():
 
 		symbolId = self.getNextElementId()
 		self.serializedSymbolsToIds[serialized] = symbolId
-		self.symbolIdsToData[symbolId] = { 
-			'id': symbolId, 
+		self.symbolIdsToData[symbolId] = {
+			'id': symbolId,
 			'name': nameHierarchy.getDisplayString()
 		}
 		return symbolId
@@ -297,8 +297,8 @@ class TestAstVisitorClient():
 
 		referenceId = self.getNextElementId()
 		self.serializedReferencesToIds[serialized] = referenceId
-		self.referenceIdsToData[referenceId] = { 
-			'id': referenceId, 
+		self.referenceIdsToData[referenceId] = {
+			'id': referenceId,
 			'context_symbol_id': contextSymbolId,
 			'referenced_symbol_id': referencedSymbolId,
 			'reference_kind': referenceKindToString(referenceKind)
@@ -319,8 +319,8 @@ class TestAstVisitorClient():
 
 		fileId = self.getNextElementId()
 		self.serializedSymbolsToIds[serialized] = fileId
-		self.symbolIdsToData[fileId] = { 
-			'id': fileId, 
+		self.symbolIdsToData[fileId] = {
+			'id': fileId,
 			'name': filePath,
 			'symbol_kind': 'FILE',
 			'definition_kind': 'INDEXED'
@@ -339,7 +339,7 @@ class TestAstVisitorClient():
 
 		localSymbolId = self.getNextElementId()
 		self.serializedLocalSymbolsToIds[name] = localSymbolId
-		self.localSymbolIdsToData[localSymbolId] = { 
+		self.localSymbolIdsToData[localSymbolId] = {
 			'id': localSymbolId,
 			'name': name,
 			'local_symbol_locations': []
