@@ -118,10 +118,17 @@ class AstVisitor:
 							referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 							contextSymbolId = self.contextStack[len(self.contextStack) - 1].id
 
+							referenceType = srctrl.REFERENCE_TYPE_USAGE
+							if node.parent is not None:
+								if node.parent.type == 'classdef':
+									referenceType = srctrl.REFERENCE_INHERITANCE
+								if node.parent.type == 'arglist' and node.parent.parent is not None and node.parent.parent.type == 'classdef':
+									referenceType = srctrl.REFERENCE_INHERITANCE
+
 							referenceId = self.client.recordReference(
 								contextSymbolId,
 								referencedSymbolId,
-								srctrl.REFERENCE_TYPE_USAGE
+								referenceType
 							)
 
 							# Record symbol kind. If the used type is within indexed code, this is not really necessary. In any other case, this is valuable info!
