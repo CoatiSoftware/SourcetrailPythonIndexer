@@ -159,34 +159,35 @@ class AstVisitor:
 
 						if definition.type == 'statement':
 							namedDefinitionParentNode = getParentWithTypeInList(definitionNode, ['classdef', 'funcdef'])
-							if namedDefinitionParentNode.type in ['classdef']:
-								# definition is a static member variable
-								recordAsLocalSymbol = False
-								if definitionNode.start_pos == node.start_pos and definitionNode.end_pos == node.end_pos:
-									recordAsSymbol = True
-									recordAsReference = False
-								else:
-									recordAsSymbol = False
-									recordAsReference = True
-							elif namedDefinitionParentNode.type in ['funcdef']:
-								# definition is may be a non-static member variable
-								if definitionNode.parent is not None and definitionNode.parent.type == 'trailer':
-									potentialParamNode = getNamedParentNode(definitionNode) # TODO: check if these are None
-									for potentialParamDefinition in self.getDefinitionsOfNode(potentialParamNode, definition.module_path):
-										if potentialParamDefinition is not None and potentialParamDefinition.type == 'param':
-											paramDefinitionNode = potentialParamDefinition._name.tree_name
-											potentialFuncdefNode = getNamedParentNode(paramDefinitionNode)
-											if potentialFuncdefNode is not None and potentialFuncdefNode.type == 'funcdef':
-												potentialClassdefNode = getNamedParentNode(potentialFuncdefNode)
-												if potentialClassdefNode is not None and potentialClassdefNode.type == 'classdef':
-													preceedingNode = paramDefinitionNode.parent.get_previous_sibling()
-													if preceedingNode is not None and preceedingNode.type != 'param':
-														# 'paramDefinitionNode' is the first parameter of a member function (aka. 'self')
-														recordAsReference = True
-														if definitionNode.start_pos == node.start_pos and definitionNode.end_pos == node.end_pos:
-															recordAsSymbol = True
-														else:
-															recordAsSymbol = False
+							if namedDefinitionParentNode is not None:
+								if namedDefinitionParentNode.type in ['classdef']:
+									# definition is a static member variable
+									recordAsLocalSymbol = False
+									if definitionNode.start_pos == node.start_pos and definitionNode.end_pos == node.end_pos:
+										recordAsSymbol = True
+										recordAsReference = False
+									else:
+										recordAsSymbol = False
+										recordAsReference = True
+								elif namedDefinitionParentNode.type in ['funcdef']:
+									# definition is may be a non-static member variable
+									if definitionNode.parent is not None and definitionNode.parent.type == 'trailer':
+										potentialParamNode = getNamedParentNode(definitionNode) # TODO: check if these are None
+										for potentialParamDefinition in self.getDefinitionsOfNode(potentialParamNode, definition.module_path):
+											if potentialParamDefinition is not None and potentialParamDefinition.type == 'param':
+												paramDefinitionNode = potentialParamDefinition._name.tree_name
+												potentialFuncdefNode = getNamedParentNode(paramDefinitionNode)
+												if potentialFuncdefNode is not None and potentialFuncdefNode.type == 'funcdef':
+													potentialClassdefNode = getNamedParentNode(potentialFuncdefNode)
+													if potentialClassdefNode is not None and potentialClassdefNode.type == 'classdef':
+														preceedingNode = paramDefinitionNode.parent.get_previous_sibling()
+														if preceedingNode is not None and preceedingNode.type != 'param':
+															# 'paramDefinitionNode' is the first parameter of a member function (aka. 'self')
+															recordAsReference = True
+															if definitionNode.start_pos == node.start_pos and definitionNode.end_pos == node.end_pos:
+																recordAsSymbol = True
+															else:
+																recordAsSymbol = False
 
 						sourceRange = getSourceRangeOfNode(node)
 

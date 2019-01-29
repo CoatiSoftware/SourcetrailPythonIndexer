@@ -46,6 +46,13 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording Local Symbols
 
+	def test_indexer_records_global_variable_as_local_symbol(self):
+		client = self.indexSourceCode(
+			'foo = 9:\n'
+		)
+		self.assertTrue('virtual_file.py<1:1> at [1:1|1:3]' in client.localSymbols)
+
+
 	def test_indexer_records_function_parameter_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'def foo(bar):\n'
