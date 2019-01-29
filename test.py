@@ -50,8 +50,25 @@ class TestPythonIndexer(unittest.TestCase):
 		)
 		self.assertTrue('FIELD: virtual_file.Foo.x at [3:8|3:8]' in client.symbols)
 
+	# TODO: write test for recording function
+
 
 # Test Recording Local Symbols
+
+	def test_indexer_records_usage_of_variable_with_multiple_definitions_as_multiple_global_symbols(self):
+		client = self.indexSourceCode(
+			'def foo(bar):\n'
+			'	if bar:\n'
+			'		baz = 9\n'
+			'	else:\n'
+			'		baz = 3\n'
+			'	return baz\n'
+			'foo(True)\n'
+			'foo(False)\n'
+		)
+		self.assertTrue('virtual_file.py<3:3> at [6:9|6:11]' in client.localSymbols)
+		self.assertTrue('virtual_file.py<5:3> at [6:9|6:11]' in client.localSymbols)
+
 
 	def test_indexer_records_global_variable_as_local_symbol(self):
 		client = self.indexSourceCode(

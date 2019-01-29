@@ -222,7 +222,7 @@ class AstVisitor:
 						elif recordAsLocalSymbol:
 							localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, getSourceRangeOfNode(definitionNode)))
 							self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
-							# don't break here, because local variables can have multiple definitions (e.g. one in 'if' branch and one in 'else' branch) TODO: write test for this
+							# don't break here, because local variables can have multiple definitions (e.g. one in 'if' branch and one in 'else' branch)
 
 
 	def endVisitName(self, node):
