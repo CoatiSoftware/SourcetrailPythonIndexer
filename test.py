@@ -17,6 +17,14 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('MODULE: virtual_file' in client.symbols)
 
 
+	def test_indexer_records_function_definition(self):
+		client = self.indexSourceCode(
+			'def foo():\n'
+			'	pass\n'
+		)
+		self.assertTrue('FUNCTION: virtual_file.foo at [1:5|1:7] with scope [1:1|3:0]' in client.symbols)
+
+
 	def test_indexer_records_class_definition(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
@@ -49,8 +57,6 @@ class TestPythonIndexer(unittest.TestCase):
 			'		self.x = None\n'
 		)
 		self.assertTrue('FIELD: virtual_file.Foo.x at [3:8|3:8]' in client.symbols)
-
-	# TODO: write test for recording function
 
 
 # Test Recording Local Symbols
