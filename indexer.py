@@ -90,7 +90,7 @@ class AstVisitor:
 		if len(self.contextStack) > 0:
 			for definition in self.getDefinitionsOfNode(node, self.sourceFilePath):
 				if definition is not None:
-					if not definition.line or not definition.column:
+					if definition.line is None or definition.column is None:
 						# Early exit. For now we don't record references for names that don't have a valid definition location
 						continue
 
