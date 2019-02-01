@@ -13,6 +13,7 @@ The SourcetrailPythonIndexer project is a Sourcetrail language extension that br
 
 
 ## Requirements
+* [Python 3](https://www.python.org)
 * [jedi 0.13.2](https://pypi.org/project/jedi/0.13.2)
 * [parso 0.3.1](https://pypi.org/project/parso/0.3.1)
 * [SourcetrailDB](https://github.com/CoatiSoftware/SourcetrailDB) Python bindings
