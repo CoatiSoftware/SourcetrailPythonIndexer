@@ -134,7 +134,6 @@ class TestPythonIndexer(unittest.TestCase):
 			'class Bar(Foo):\n'
 			'	pass\n'
 		)
-		print(client.references)
 		self.assertTrue('INHERITANCE: virtual_file.Bar -> virtual_file.Foo at [3:11|3:13]' in client.references)
 
 
@@ -198,6 +197,17 @@ class TestPythonIndexer(unittest.TestCase):
 		)
 		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [3:8|3:8]' in client.references)
 
+# Test Recording Errors
+
+	def test_indexer_records_error(self):
+		client = self.indexSourceCode(
+			'def foo()\n' # missing ":" character
+			'	pass\n'
+		)
+		self.assertTrue('ERROR: "Unexpected token of type "INDENT" encountered." at [2:2|2:1]' in client.errors)
+
+
+# Utility Functions
 
 	def indexSourceCode(self, sourceCode, verbose = False):
 		workingDirectory = os.getcwd()
@@ -216,12 +226,12 @@ class TestPythonIndexer(unittest.TestCase):
 
 class TestAstVisitorClient():
 
-	symbols = []
-	localSymbols = []
-	references = []
-
-
 	def __init__(self):
+		self.symbols = []
+		self.localSymbols = []
+		self.references = []
+		self.errors = []
+
 		self.serializedSymbolsToIds = {}
 		self.symbolIdsToData = {}
 		self.serializedLocalSymbolsToIds = {}
@@ -419,7 +429,11 @@ class TestAstVisitorClient():
 
 
 	def recordError(self, message, fatal, sourceRange):
-		# FIXME: implement this one!
+		errorString = ""
+		if fatal:
+			errorString += "FATAL "
+		errorString += "ERROR: \"" + message + "\" at " + sourceRange.toString()
+		self.errors.append(errorString)
 		return
 
 
@@ -509,4 +523,4 @@ def referenceKindToString(referenceKind):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(exit=False)

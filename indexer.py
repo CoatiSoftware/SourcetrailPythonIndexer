@@ -273,6 +273,17 @@ class AstVisitor:
 				self.contextStack.pop()
 
 
+	def beginVisitErrorLeaf(self, node):
+		self.client.recordError('Unexpected token of type \"' + node.token_type + '\" encountered.', False, getSourceRangeOfNode(node))
+
+
+	def endVisitErrorLeaf(self, node):
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			if node == contextNode:
+				self.contextStack.pop()
+
+
 	def traverseNode(self, node):
 		if not node:
 			return
@@ -283,6 +294,8 @@ class AstVisitor:
 			self.beginVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.beginVisitFuncdef(node)
+		elif node.type == 'error_leaf':
+			self.beginVisitErrorLeaf(node)
 
 		if hasattr(node, 'children'):
 			for c in node.children:
@@ -294,6 +307,8 @@ class AstVisitor:
 			self.endVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
+		elif node.type == 'error_leaf':
+			self.endVisitErrorLeaf(node)
 
 
 	def getDefinitionsOfNode(self, node, nodeSourceFilePath):
