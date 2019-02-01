@@ -54,6 +54,21 @@ optional arguments:
 ```
 
 
+## Contributing
+If you like this project and want to get involved, there are lots of ways you can help:
+
+* __Spread the word.__ The more people want this project to grow, the greater the motivation for the developers to get things done.
+* __Test the indexer.__ Run it on your own source code. There are still things that are not handled at all or edge cases that have not been considered yet. If you find anything, just create an issue here. Best, include some sample code snippet that illustrates the issue, so we can use it as a basis to craft a test case for our continuous integration and no one will ever break that case again.
+* __Write some code.__ Don't be shy here. You can implement whole new features or fix some bugs, but you can also do some refactoring if you think that it benefits the readability or the maintainability of the code. Still, no matter if you just want to work on cosmetics or implement new features, it would be best if you create an issue here on the issue tracker before you actually start handing in pull requests, so that we can discuss those changes first and thus raise the probability that those changes will get pulled quickly.
+
+To create a pull request, follow these steps:
+* Fork the Repo on GitHub.
+* Make your commits.
+* If you added functionality or fixed a bug, please add a test.
+* Add your name to the "Code Contributors" section in AUTHORS.txt file.
+* Push to your fork and submit a pull request.
+
+
 ## Executing the Tests
 To run the tests for this project, execute the command:
 ```
