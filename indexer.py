@@ -241,7 +241,7 @@ class AstVisitor:
 
 	def beginVisitClassdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node, self.sourceFilePath))
+		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode, self.sourceFilePath))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
@@ -258,7 +258,7 @@ class AstVisitor:
 
 	def beginVisitFuncdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(node, self.sourceFilePath))
+		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode, self.sourceFilePath))
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
@@ -340,34 +340,54 @@ class AstVisitor:
 		else:
 			nameNode = getFirstDirectChildWithType(node, 'name')
 
-		parentNode = getNamedParentNode(node)
-
 		if nameNode is None:
 			return None
 
-		if parentNode is not None and parentNode.type == 'funcdef':
-			grandParentNode = getNamedParentNode(parentNode)
-			if grandParentNode is not None and grandParentNode.type == 'classdef':
-				for definition in self.getDefinitionsOfNode(node, nodeSourceFilePath):
-					if definition.type == 'param':
-						preceedingNode = definition._name.tree_name.parent.get_previous_sibling()
+		for definition in self.getDefinitionsOfNode(nameNode, nodeSourceFilePath):
+
+			definitionModulePath = definition.module_path
+			if definitionModulePath is None:
+				definitionModulePath = nodeSourceFilePath
+
+			definitionNameNode = definition._name.tree_name
+
+			parentNode = getNamedParentNode(definitionNameNode)
+
+			if parentNode is not None:
+				parentNameNode = getFirstDirectChildWithType(parentNode, 'name')
+				if parentNameNode is not None:
+					for parentDefinition in self.getDefinitionsOfNode(parentNameNode, definitionModulePath):
+						if parentDefinition is None or parentDefinition.type != 'param':
+							continue
+
+						parentDefinitionNameNode = parentDefinition._name.tree_name
+
+						potentialFuncdefNode = getNamedParentNode(parentDefinitionNameNode)
+						if potentialFuncdefNode is None or potentialFuncdefNode.type != 'funcdef':
+							continue
+
+						potentialClassdefNode = getNamedParentNode(potentialFuncdefNode)
+						if potentialClassdefNode is None or potentialClassdefNode.type != 'classdef':
+							continue
+
+						preceedingNode = parentDefinitionNameNode.parent.get_previous_sibling()
 						if preceedingNode is not None and preceedingNode.type != 'param':
 							# 'node' is the first parameter of a member function (aka. 'self')
-							node = grandParentNode
-							parentNode =  getNamedParentNode(node)
-							nameNode = getFirstDirectChildWithType(node, 'name')
+							parentNode =  potentialClassdefNode
 
-		nameElement = NameElement(nameNode.value)
+			nameElement = NameElement(definitionNameNode.value)
 
-		if parentNode is not None:
-			parentNodeNameHierarchy = self.getNameHierarchyOfNode(parentNode, nodeSourceFilePath)
-			if parentNodeNameHierarchy is not None:
-				parentNodeNameHierarchy.nameElements.append(nameElement)
-				return parentNodeNameHierarchy
+			if parentNode is not None:
+				parentNodeNameHierarchy = self.getNameHierarchyOfNode(parentNode, definitionModulePath)
+				if parentNodeNameHierarchy is not None:
+					parentNodeNameHierarchy.nameElements.append(nameElement)
+					return parentNodeNameHierarchy
 
-		nameHierarchy = NameHierarchy(NameElement(getModuleNameForFilePath(nodeSourceFilePath)), '.')
-		nameHierarchy.nameElements.append(nameElement)
-		return nameHierarchy
+			nameHierarchy = NameHierarchy(NameElement(getModuleNameForFilePath(nodeSourceFilePath)), '.')
+			nameHierarchy.nameElements.append(nameElement)
+			return nameHierarchy
+
+		return None
 
 
 class VerboseAstVisitor(AstVisitor):
@@ -403,8 +423,10 @@ class AstVisitorClient:
 
 
 	def recordSymbol(self, nameHierarchy):
-		symbolId = srctrl.recordSymbol(nameHierarchy.serialize())
-		return symbolId
+		if nameHierarchy is not None:
+			symbolId = srctrl.recordSymbol(nameHierarchy.serialize())
+			return symbolId
+		return 0
 
 
 	def recordSymbolDefinitionKind(self, symbolId, symbolDefinitionKind):
