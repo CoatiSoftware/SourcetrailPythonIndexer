@@ -121,8 +121,10 @@ class AstVisitor:
 							referenceType = srctrl.REFERENCE_TYPE_USAGE
 							if node.parent is not None:
 								if node.parent.type == 'classdef':
+									# this would be the case for "class Foo(Bar)"
 									referenceType = srctrl.REFERENCE_INHERITANCE
 								if node.parent.type == 'arglist' and node.parent.parent is not None and node.parent.parent.type == 'classdef':
+									# this would be the case for "class Foo(Bar, Baz)"
 									referenceType = srctrl.REFERENCE_INHERITANCE
 
 							referenceId = self.client.recordReference(
@@ -189,22 +191,23 @@ class AstVisitor:
 								elif namedDefinitionParentNode.type in ['funcdef']:
 									# definition is may be a non-static member variable
 									if definitionNode.parent is not None and definitionNode.parent.type == 'trailer':
-										potentialParamNode = getNamedParentNode(definitionNode) # TODO: check if these are None
-										for potentialParamDefinition in self.getDefinitionsOfNode(potentialParamNode, definitionModulePath):
-											if potentialParamDefinition is not None and potentialParamDefinition.type == 'param':
-												paramDefinitionNode = potentialParamDefinition._name.tree_name
-												potentialFuncdefNode = getNamedParentNode(paramDefinitionNode)
-												if potentialFuncdefNode is not None and potentialFuncdefNode.type == 'funcdef':
-													potentialClassdefNode = getNamedParentNode(potentialFuncdefNode)
-													if potentialClassdefNode is not None and potentialClassdefNode.type == 'classdef':
-														preceedingNode = paramDefinitionNode.parent.get_previous_sibling()
-														if preceedingNode is not None and preceedingNode.type != 'param':
-															# 'paramDefinitionNode' is the first parameter of a member function (aka. 'self')
-															recordAsReference = True
-															if definitionNode.start_pos == node.start_pos and definitionNode.end_pos == node.end_pos:
-																recordAsSymbol = True
-															else:
-																recordAsSymbol = False
+										potentialParamNode = getNamedParentNode(definitionNode)
+										if potentialParamNode is not None:
+											for potentialParamDefinition in self.getDefinitionsOfNode(potentialParamNode, definitionModulePath):
+												if potentialParamDefinition is not None and potentialParamDefinition.type == 'param':
+													paramDefinitionNode = potentialParamDefinition._name.tree_name
+													potentialFuncdefNode = getNamedParentNode(paramDefinitionNode)
+													if potentialFuncdefNode is not None and potentialFuncdefNode.type == 'funcdef':
+														potentialClassdefNode = getNamedParentNode(potentialFuncdefNode)
+														if potentialClassdefNode is not None and potentialClassdefNode.type == 'classdef':
+															preceedingNode = paramDefinitionNode.parent.get_previous_sibling()
+															if preceedingNode is not None and preceedingNode.type != 'param':
+																# 'paramDefinitionNode' is the first parameter of a member function (aka. 'self')
+																recordAsReference = True
+																if definitionNode.start_pos == node.start_pos and definitionNode.end_pos == node.end_pos:
+																	recordAsSymbol = True
+																else:
+																	recordAsSymbol = False
 
 						sourceRange = getSourceRangeOfNode(node)
 
@@ -343,6 +346,7 @@ class AstVisitor:
 		if nameNode is None:
 			return None
 
+		# we derive the name for the canonical node (e.g. the node's definition)
 		for definition in self.getDefinitionsOfNode(nameNode, nodeSourceFilePath):
 
 			definitionModulePath = definition.module_path
@@ -353,6 +357,8 @@ class AstVisitor:
 
 			parentNode = getNamedParentNode(definitionNameNode)
 
+			# if the node is defines as a non-static member variable, we remove the "function_name.self" from the
+			# name hierarchy (e.g. "Foo.__init__.self.bar" gets shortened to "Foo.bar")
 			if parentNode is not None:
 				parentNameNode = getFirstDirectChildWithType(parentNode, 'name')
 				if parentNameNode is not None:

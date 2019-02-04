@@ -197,6 +197,7 @@ class TestPythonIndexer(unittest.TestCase):
 		)
 		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [3:8|3:8]' in client.references)
 
+
 # Test Recording Errors
 
 	def test_indexer_records_error(self):
