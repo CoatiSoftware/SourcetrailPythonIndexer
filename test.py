@@ -207,6 +207,17 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('ERROR: "Unexpected token of type "INDENT" encountered." at [2:2|2:1]' in client.errors)
 
 
+# Test GitHub Issues
+
+	def test_issue_6(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def __init__(self, bar):\n'
+			'		self.baz = bar\n'
+		)
+		self.assertTrue('FIELD: virtual_file.Foo.baz at [3:8|3:10]' in client.symbols)
+
+
 # Utility Functions
 
 	def indexSourceCode(self, sourceCode, verbose = False):
