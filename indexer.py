@@ -82,7 +82,7 @@ class AstVisitor:
 		self.contextStack = []
 
 		fileId = self.client.recordFile(self.sourceFilePath)
-		if not fileId:
+		if fileId == 0:
 			print('ERROR: ' + srctrl.getLastError())
 		self.client.recordFileLanguage(fileId, 'python')
 
@@ -91,6 +91,67 @@ class AstVisitor:
 		self.client.recordSymbolKind(moduleId, srctrl.SYMBOL_MODULE)
 
 		self.contextStack.append(ContextInfo(fileId, None))
+
+
+	def traverseNode(self, node):
+		if node is None:
+			return
+
+		if node.type == 'classdef':
+			self.beginVisitClassdef(node)
+		elif node.type == 'funcdef':
+			self.beginVisitFuncdef(node)
+		elif node.type == 'name':
+			self.beginVisitName(node)
+		elif node.type == 'error_leaf':
+			self.beginVisitErrorLeaf(node)
+
+		if hasattr(node, 'children'):
+			for c in node.children:
+				self.traverseNode(c)
+
+		if node.type == 'classdef':
+			self.endVisitClassdef(node)
+		elif node.type == 'funcdef':
+			self.endVisitFuncdef(node)
+		elif node.type == 'name':
+			self.endVisitName(node)
+		elif node.type == 'error_leaf':
+			self.endVisitErrorLeaf(node)
+
+
+	def beginVisitClassdef(self, node):
+		nameNode = getFirstDirectChildWithType(node, 'name')
+		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode, self.sourceFilePath))
+		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
+		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
+		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
+		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
+		self.contextStack.append(ContextInfo(symbolId, node))
+
+
+	def endVisitClassdef(self, node):
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			if node == contextNode:
+				self.contextStack.pop()
+
+
+	def beginVisitFuncdef(self, node):
+		nameNode = getFirstDirectChildWithType(node, 'name')
+		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode, self.sourceFilePath))
+		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
+		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
+		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
+		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
+		self.contextStack.append(ContextInfo(symbolId, node))
+
+
+	def endVisitFuncdef(self, node):
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			if node == contextNode:
+				self.contextStack.pop()
 
 
 	def beginVisitName(self, node):
@@ -246,40 +307,6 @@ class AstVisitor:
 				self.contextStack.pop()
 
 
-	def beginVisitClassdef(self, node):
-		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode, self.sourceFilePath))
-		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
-		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
-		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
-		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
-		self.contextStack.append(ContextInfo(symbolId, node))
-
-
-	def endVisitClassdef(self, node):
-		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
-			if node == contextNode:
-				self.contextStack.pop()
-
-
-	def beginVisitFuncdef(self, node):
-		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode, self.sourceFilePath))
-		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
-		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
-		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
-		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
-		self.contextStack.append(ContextInfo(symbolId, node))
-
-
-	def endVisitFuncdef(self, node):
-		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
-			if node == contextNode:
-				self.contextStack.pop()
-
-
 	def beginVisitErrorLeaf(self, node):
 		self.client.recordError('Unexpected token of type \"' + node.token_type + '\" encountered.', False, getSourceRangeOfNode(node))
 
@@ -289,33 +316,6 @@ class AstVisitor:
 			contextNode = self.contextStack[len(self.contextStack) - 1].node
 			if node == contextNode:
 				self.contextStack.pop()
-
-
-	def traverseNode(self, node):
-		if not node:
-			return
-
-		if node.type == 'name':
-			self.beginVisitName(node)
-		elif node.type == 'classdef':
-			self.beginVisitClassdef(node)
-		elif node.type == 'funcdef':
-			self.beginVisitFuncdef(node)
-		elif node.type == 'error_leaf':
-			self.beginVisitErrorLeaf(node)
-
-		if hasattr(node, 'children'):
-			for c in node.children:
-				self.traverseNode(c)
-
-		if node.type == 'name':
-			self.endVisitName(node)
-		elif node.type == 'classdef':
-			self.endVisitClassdef(node)
-		elif node.type == 'funcdef':
-			self.endVisitFuncdef(node)
-		elif node.type == 'error_leaf':
-			self.endVisitErrorLeaf(node)
 
 
 	def getDefinitionsOfNode(self, node, nodeSourceFilePath):
@@ -565,7 +565,7 @@ class NameHierarchy():
 
 	def __init__(self, nameElement, delimiter):
 		self.nameElements = []
-		if not nameElement == None:
+		if nameElement is not None:
 			self.nameElements.append(nameElement)
 		self.delimiter = delimiter
 
