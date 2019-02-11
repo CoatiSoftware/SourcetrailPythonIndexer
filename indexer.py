@@ -5,9 +5,10 @@ import sys
 
 import sourcetraildb as srctrl
 
+_virtualFilePath = 'virtual_file.py'
 
 def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
-	sourceFilePath = 'virtual_file.py'
+	sourceFilePath = _virtualFilePath
 
 	environment = jedi.api.environment.Environment(sys.executable)
 
@@ -102,7 +103,10 @@ class AstVisitor:
 
 					definitionModulePath = definition.module_path
 					if definitionModulePath is None:
-						definitionModulePath = self.sourceFilePath
+						if self.sourceFilePath == _virtualFilePath:
+							definitionModulePath = self.sourceFilePath
+						else:
+							continue
 
 					if definition.type in ['class', 'function']:
 						(startLine, startColumn) = node.start_pos
@@ -348,10 +352,12 @@ class AstVisitor:
 
 		# we derive the name for the canonical node (e.g. the node's definition)
 		for definition in self.getDefinitionsOfNode(nameNode, nodeSourceFilePath):
-
 			definitionModulePath = definition.module_path
 			if definitionModulePath is None:
-				definitionModulePath = nodeSourceFilePath
+				if self.sourceFilePath == _virtualFilePath:
+					definitionModulePath = self.sourceFilePath
+				else:
+					continue
 
 			definitionNameNode = definition._name.tree_name
 
