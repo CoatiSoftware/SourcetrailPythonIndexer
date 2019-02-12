@@ -24,6 +24,7 @@ install:
     - SET PATH=%PYTHON_PATH%;%PIP_PATH%;%PATH%
     - cmd: pip install parso==0.3.1
     - cmd: pip install jedi==0.13.2
+    - cmd: pip install pyinstaller
 
 
 build_script:
@@ -33,5 +34,22 @@ build_script:
         copy external/$env:SOURCETRAILDB_PATH/_sourcetraildb.pyd ./
 
 
+after_build:
+    - cmd: pyinstaller freezing.spec
+    - ps: $env:PACKAGE_NAME = 'SourcetrailPythonIndexer' + '_v0_db0_p0' + '-windows-' + $env:MBITS + 'bit'
+    - ps: echo $env:PACKAGE_NAME
+    - mkdir artifacts
+    - cd artifacts
+    - mkdir %PACKAGE_NAME%
+    - cd ..
+    - ps: Copy-Item -Path dist/SourcetrailPythonIndexer -Recurse -Destination artifacts/$env:PACKAGE_NAME
+
+
 test_script:
     - cmd: python test.py
+
+
+artifacts:
+    - path: artifacts
+      name: $(PACKAGE_NAME)
+      type: Zip

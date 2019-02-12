@@ -1,6 +1,7 @@
 __pycache__
 .vscode
-
+build
+dist
 
 /_sourcetraildb.pyd
 /sourcetraildb.py
