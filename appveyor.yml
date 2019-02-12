@@ -1,11 +1,10 @@
 version: 0.0.0.{build}
+image: Visual Studio 2017
 
 
 environment:
     matrix:
         - MBITS: 32
-          PYTHON_VERSION: 37
-        - MBITS: 64
           PYTHON_VERSION: 37
 
 
@@ -27,6 +26,20 @@ install:
     - cmd: pip install pyinstaller
 
 
+before_build:
+    - ps: $env:PACKAGE_VERSION = Get-Content -Path ./version.txt
+    - ps: echo "Package version is $env:PACKAGE_VERSION"
+    - ps: $env:MAJOR_VERSION = $env:PACKAGE_VERSION.Split("_")[0].TrimStart("v")
+    - ps: echo "Major version is $env:MAJOR_VERSION"
+    - ps: $env:DATABASE_VERSION = $env:PACKAGE_VERSION.Split("_")[1].TrimStart("db")
+    - ps: echo "Database version is $env:DATABASE_VERSION"
+    - ps: $env:PATCH_VERSION = $env:PACKAGE_VERSION.Split("_")[2].TrimStart("p")
+    - ps: echo "Patch version is $env:PATCH_VERSION"
+    - ps: $env:BUILD_VERSION = $env:MAJOR_VERSION + "." + $env:DATABASE_VERSION + "." + $env:PATCH_VERSION + "." + $env:APPVEYOR_BUILD_NUMBER 
+    - ps: echo "update build version to $env:BUILD_VERSION"
+    - ps: Update-AppveyorBuild -Version $env:BUILD_VERSION
+
+
 build_script:
     - ps: |
         $env:SOURCETRAILDB_PATH="sourcetrailbd_python" + $env:PYTHON_VERSION + "_v1_db23_p0-windows-" + $env:MBITS + "bit"
@@ -36,13 +49,13 @@ build_script:
 
 after_build:
     - cmd: pyinstaller freezing.spec
-    - ps: $env:PACKAGE_NAME = 'SourcetrailPythonIndexer' + '_v0_db0_p0' + '-windows-' + $env:MBITS + 'bit'
+    - ps: $env:PACKAGE_NAME = 'SourcetrailPythonIndexer_' + $env:PACKAGE_VERSION + '-windows'
     - ps: echo $env:PACKAGE_NAME
     - mkdir artifacts
     - cd artifacts
     - mkdir %PACKAGE_NAME%
     - cd ..
-    - ps: Copy-Item -Path dist/SourcetrailPythonIndexer -Recurse -Destination artifacts/$env:PACKAGE_NAME
+    - ps: Copy-Item -Path dist/SourcetrailPythonIndexer/* -Recurse -Destination artifacts/$env:PACKAGE_NAME
 
 
 test_script:
@@ -53,3 +66,12 @@ artifacts:
     - path: artifacts
       name: $(PACKAGE_NAME)
       type: Zip
+
+
+deploy:
+    provider: GitHub
+    artifact: $(PACKAGE_NAME)
+    auth_token:
+        secure: MB2DqEW2eCwgCYtz/5BEn18XweV4eU760lzt7zpZ9fGEU5mxxhh79FLzK8Ux++09
+    on:
+        appveyor_repo_tag: true
