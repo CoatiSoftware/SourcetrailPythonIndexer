@@ -7,12 +7,39 @@ import sourcetraildb as srctrl
 
 _virtualFilePath = 'virtual_file.py'
 
+import sys
+
+def getEnvironment():
+	try:
+		environment = jedi.get_default_environment()
+		environment._get_subprocess() # check if this environment is really functional
+		return environment
+	except Exception:
+		pass
+
+	try:
+		for environment in jedi.find_system_environments():
+			return environment
+	except Exception:
+		pass
+
+	if os.name == 'nt': # this is just a workaround and shall be removed once Jedi is fixed (Pull request https://github.com/davidhalter/jedi/pull/1282)
+		for version in jedi.api.environment._SUPPORTED_PYTHONS:
+			for exe in jedi.api.environment._get_executables_from_windows_registry(version):
+				try:
+					return jedi.api.environment.Environment(exe)
+				except jedi.InvalidPythonEnvironment:
+					pass
+
+	raise jedi.InvalidPythonEnvironment("Cannot find executable python.")
+
+
 def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
 	sourceFilePath = _virtualFilePath
 
-	environment = jedi.api.environment.Environment(sys.executable)
+	environment = getEnvironment()
 
-	project = jedi.api.project.Project(workingDirectory)
+	project = jedi.api.project.Project(workingDirectory, environment = environment)
 
 	evaluator = jedi.evaluate.Evaluator(
 		project,
@@ -40,8 +67,12 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 	with open(sourceFilePath, 'r') as input:
 		sourceCode=input.read()
 
-	project = jedi.api.project.Project(workingDirectory)
-	environment = project.get_environment()
+	environment = getEnvironment()
+
+	if isVerbose:
+		print('Using Python environment at \"' + environment.path + '\" for indexing.')
+
+	project = jedi.api.project.Project(workingDirectory, environment = environment)
 
 	evaluator = jedi.evaluate.Evaluator(
 		project,
