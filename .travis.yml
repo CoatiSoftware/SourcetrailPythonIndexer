@@ -1,0 +1,94 @@
+language: cpp
+
+
+matrix:
+  include:
+    - os: linux
+      sudo: required
+      compiler: gcc
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+            - "python3"
+            - "python3-pip"
+      env:
+        - CC_COMPILER=gcc-5 CXX_COMPILER=g++-5 PYTHON=3.4
+
+    - os: osx
+      compiler: clang
+      env:
+        - PYTHON=3.6
+
+
+before_install:
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      brew install swig
+      brew link --force swig
+    elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo apt-get update
+      sudo apt-get install -qq swig
+    fi
+
+
+install:
+  - if [[ "${CXX_COMPILER}" != "" ]]; then export CXX=${CXX_COMPILER}; export CXX_FOR_BUILD=${CXX_COMPILER}; fi
+  - if [[ "${CC_COMPILER}" != "" ]]; then export CC=${CC_COMPILER}; export CC_FOR_BUILD=${CC_COMPILER}; fi
+  - sudo pip3 install "parso==0.3.1"
+  - sudo pip3 install "jedi==0.13.2"
+  - sudo pip3 install "pyinstaller"
+
+script:
+  - |
+    PACKAGE_VERSION=$(head -1 version.txt)
+    export PACKAGE_NAME="SourcetrailPythonIndexer_${PACKAGE_VERSION}-${TRAVIS_OS_NAME}"
+  - echo ${PACKAGE_NAME}
+  - git clone -q --branch=master https://github.com/CoatiSoftware/SourcetrailDB.git
+  - cd SourcetrailDB
+  - mkdir build
+  - cd build
+  - cmake -DBUILD_BINDINGS_PYTHON=1 -DPYTHON_VERSION=$PYTHON ..
+  - make
+  - cd ../..
+  - cp SourcetrailDB/build/bindings_python/sourcetraildb.py .
+  - cp SourcetrailDB/build/bindings_python/_sourcetraildb* _sourcetraildb.so
+  - pyinstaller freezing.spec
+  - python3 test.py
+
+
+before_deploy:
+  - |
+    cd $TRAVIS_BUILD_DIR
+
+    VERSION=$(head -1 build/version.txt)
+
+    if [[ "$PYTHON_BINDING" == "1" ]]; then
+      PYTHON_VERSION=${PYTHON//.}
+      PYTHON_VERSION=${PYTHON_VERSION:0:2}
+      BUNDLE_NAME=sourcetraildb_python${PYTHON_VERSION}_${VERSION}-${TRAVIS_OS_NAME}-64bit-${TRAVIS_COMPILER}
+
+      mkdir -p $BUNDLE_NAME
+      cp build/bindings_python/sourcetraildb.py $BUNDLE_NAME
+      cp build/bindings_python/_sourcetraildb* $BUNDLE_NAME/_sourcetraildb.so
+    else
+      BUNDLE_NAME=sourcetraildb_core_${VERSION}-${TRAVIS_OS_NAME}-64bit-${TRAVIS_COMPILER}
+
+      mkdir -p $BUNDLE_NAME/include
+      mkdir -p $BUNDLE_NAME/lib
+
+      cp build/core/*.a $BUNDLE_NAME/lib
+      cp core/include/* $BUNDLE_NAME/include
+      cp build/core/include/* $BUNDLE_NAME/include
+    fi
+
+    mkdir -p $BUNDLE_NAME/license
+    cp LICENSE.txt $BUNDLE_NAME/license/license_sourcetraildb.txt
+    cp external/catch/license_catch.txt $BUNDLE_NAME/license/
+    cp external/cpp_sqlite/license_cpp_sqlite.txt $BUNDLE_NAME/license/
+    cp external/json/license_json.txt $BUNDLE_NAME/license/
+
+    zip -r $BUNDLE_NAME $BUNDLE_NAME
