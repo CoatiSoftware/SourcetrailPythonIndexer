@@ -1,0 +1,81 @@
+language: cpp
+
+
+matrix:
+  include:
+    - os: linux
+      sudo: required
+      compiler: gcc
+      dist: trusty
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+            - "python3"
+            - "python3-pip"
+      env:
+        - CC_COMPILER=gcc-5 CXX_COMPILER=g++-5 PYTHON=3.4
+
+    - os: osx
+      compiler: clang
+      env:
+        - PYTHON=3.6
+
+
+before_install:
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      brew install swig
+      brew link --force swig
+    elif [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo apt-get update
+      sudo apt-get install -qq swig
+    fi
+
+
+install:
+  - if [[ "${CXX_COMPILER}" != "" ]]; then export CXX=${CXX_COMPILER}; export CXX_FOR_BUILD=${CXX_COMPILER}; fi
+  - if [[ "${CC_COMPILER}" != "" ]]; then export CC=${CC_COMPILER}; export CC_FOR_BUILD=${CC_COMPILER}; fi
+  - sudo pip3 install "parso==0.3.1"
+  - sudo pip3 install "jedi==0.13.2"
+  - sudo pip3 install "pyinstaller"
+
+
+script:
+  - |
+    PACKAGE_VERSION=$(head -1 version.txt)
+    export PACKAGE_NAME="SourcetrailPythonIndexer_${PACKAGE_VERSION}-${TRAVIS_OS_NAME}"
+  - echo ${PACKAGE_NAME}
+  - git clone -q --branch=master https://github.com/CoatiSoftware/SourcetrailDB.git
+  - cd SourcetrailDB
+  - mkdir build
+  - cd build
+  - cmake -DBUILD_BINDINGS_PYTHON=1 -DPYTHON_VERSION=$PYTHON ..
+  - make
+  - cd ../..
+  - cp SourcetrailDB/build/bindings_python/sourcetraildb.py .
+  - cp SourcetrailDB/build/bindings_python/_sourcetraildb* _sourcetraildb.so
+  - pyinstaller freezing.spec
+  - python3 test.py
+
+
+before_deploy:
+  - |
+    cd $TRAVIS_BUILD_DIR/dist
+    mv SourcetrailPythonIndexer ${PACKAGE_NAME}
+    zip -r ${PACKAGE_NAME} ${PACKAGE_NAME}
+
+
+deploy:
+  provider: releases
+  api_key:
+    secure: aCJiSdJhxayw/dp8OecP+r3PGVRbHHO/UOoM1X2KzP05fHGvXB3jhWIYCefyVMe6hp1xHjM5aYUOejp+25CEl6xOjRZpLJqkAmdIcBls0nRvmseQNzEY1iIRPogfg2isGsCZG66IkLQuU9/CjiJJz8t5/wMopawbkjD9NDg1I5dXONglNz59h8SPgZvWc4YHrn0PyxE1lSihlNBmGXu3RX1MI40jTUNNy3hByFukAArJAiCNdD96BL1JKeMOFjTob0DjdGN7LHkB26hrcXR4/oNOr2sZW+bELn8vL59YOpJVtMDkBajL21KQ4b9kiGgtbsfLQecF3twHq/MsZIa/oCetRYMyTHW2nNIY0vFPeWwl+HRLEWUl+afpWlRG17ODs9RDxM7CpW3yvVl6bzILiCgBH84e0tbpPsK1Rr7I1ARZgZ7YSJ2moTZMSoo3A1quHRBpxMlGM42ao98HTuT/PQBKxcbol7QkLyPL80IHFDn7ekZKUeVo4e9hT5kNF7aFIDC6KolxitV2ia5dV+yL13JXi4DllotmCXKzDy8dMk4wg9OGFLOSz0S2h97F1r7ajtxxTL02sGysAsLflHT12X53U3nKulWr5Jqm37LfhuIUxEQWKLxvPN5LmCc8+yunSey95sUV3m7cB7n4oHGny1+WBDAotSKdS+ENJdPlEyw=
+  file_glob: true
+  file: "$TRAVIS_BUILD_DIR/dist/*.zip"
+  overwrite: true
+  skip_cleanup: true
+  on:
+    tags: true
+    repo: CoatiSoftware/SourcetrailPythonIndexer

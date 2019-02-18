@@ -5,6 +5,7 @@ Python Indexer for [Sourcetrail](https://www.sourcetrail.com/) based on [jedi](h
 ## CI Pipelines
 Windows: [![Build status](https://ci.appveyor.com/api/projects/status/4vo082swmhmny1a1/branch/master?svg=true)](https://ci.appveyor.com/project/mlangkabel/sourcetrailpythonindexer/branch/master)
 
+Linux and macOS: [![Build Status](https://travis-ci.org/CoatiSoftware/SourcetrailPythonIndexer.svg?branch=master)](https://travis-ci.org/CoatiSoftware/SourcetrailPythonIndexer)
 
 ## Description
 The SourcetrailPythonIndexer project is a Sourcetrail language extension that brings Python support to Sourcetrail. This project is still in a prototype state, but you can already run it on your Python code!
