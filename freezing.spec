@@ -29,7 +29,7 @@ def get_binaries():
 
 
 a = Analysis(['run.py'],
-             pathex=['C:\\sourcetrail\\language_packages\\SourcetrailPythonIndexer\\SourcetrailPythonIndexer'],
+             pathex=['./'],
              binaries=[],
              datas=get_binaries(),
              hiddenimports=[],
