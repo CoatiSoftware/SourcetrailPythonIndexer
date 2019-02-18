@@ -42,6 +42,7 @@ install:
   - sudo pip3 install "jedi==0.13.2"
   - sudo pip3 install "pyinstaller"
 
+
 script:
   - |
     PACKAGE_VERSION=$(head -1 version.txt)
@@ -62,33 +63,19 @@ script:
 
 before_deploy:
   - |
-    cd $TRAVIS_BUILD_DIR
+    cd $TRAVIS_BUILD_DIR/dist
+    mv SourcetrailPythonIndexer ${PACKAGE_NAME}
+    zip -r ${PACKAGE_NAME} ${PACKAGE_NAME}
 
-    VERSION=$(head -1 build/version.txt)
 
-    if [[ "$PYTHON_BINDING" == "1" ]]; then
-      PYTHON_VERSION=${PYTHON//.}
-      PYTHON_VERSION=${PYTHON_VERSION:0:2}
-      BUNDLE_NAME=sourcetraildb_python${PYTHON_VERSION}_${VERSION}-${TRAVIS_OS_NAME}-64bit-${TRAVIS_COMPILER}
-
-      mkdir -p $BUNDLE_NAME
-      cp build/bindings_python/sourcetraildb.py $BUNDLE_NAME
-      cp build/bindings_python/_sourcetraildb* $BUNDLE_NAME/_sourcetraildb.so
-    else
-      BUNDLE_NAME=sourcetraildb_core_${VERSION}-${TRAVIS_OS_NAME}-64bit-${TRAVIS_COMPILER}
-
-      mkdir -p $BUNDLE_NAME/include
-      mkdir -p $BUNDLE_NAME/lib
-
-      cp build/core/*.a $BUNDLE_NAME/lib
-      cp core/include/* $BUNDLE_NAME/include
-      cp build/core/include/* $BUNDLE_NAME/include
-    fi
-
-    mkdir -p $BUNDLE_NAME/license
-    cp LICENSE.txt $BUNDLE_NAME/license/license_sourcetraildb.txt
-    cp external/catch/license_catch.txt $BUNDLE_NAME/license/
-    cp external/cpp_sqlite/license_cpp_sqlite.txt $BUNDLE_NAME/license/
-    cp external/json/license_json.txt $BUNDLE_NAME/license/
-
-    zip -r $BUNDLE_NAME $BUNDLE_NAME
+deploy:
+  provider: releases
+  api_key:
+    secure: aCJiSdJhxayw/dp8OecP+r3PGVRbHHO/UOoM1X2KzP05fHGvXB3jhWIYCefyVMe6hp1xHjM5aYUOejp+25CEl6xOjRZpLJqkAmdIcBls0nRvmseQNzEY1iIRPogfg2isGsCZG66IkLQuU9/CjiJJz8t5/wMopawbkjD9NDg1I5dXONglNz59h8SPgZvWc4YHrn0PyxE1lSihlNBmGXu3RX1MI40jTUNNy3hByFukAArJAiCNdD96BL1JKeMOFjTob0DjdGN7LHkB26hrcXR4/oNOr2sZW+bELn8vL59YOpJVtMDkBajL21KQ4b9kiGgtbsfLQecF3twHq/MsZIa/oCetRYMyTHW2nNIY0vFPeWwl+HRLEWUl+afpWlRG17ODs9RDxM7CpW3yvVl6bzILiCgBH84e0tbpPsK1Rr7I1ARZgZ7YSJ2moTZMSoo3A1quHRBpxMlGM42ao98HTuT/PQBKxcbol7QkLyPL80IHFDn7ekZKUeVo4e9hT5kNF7aFIDC6KolxitV2ia5dV+yL13JXi4DllotmCXKzDy8dMk4wg9OGFLOSz0S2h97F1r7ajtxxTL02sGysAsLflHT12X53U3nKulWr5Jqm37LfhuIUxEQWKLxvPN5LmCc8+yunSey95sUV3m7cB7n4oHGny1+WBDAotSKdS+ENJdPlEyw=
+  file_glob: true
+  file: "$TRAVIS_BUILD_DIR/dist/*.zip"
+  overwrite: true
+  skip_cleanup: true
+  on:
+    tags: true
+    repo: CoatiSoftware/SourcetrailPythonIndexer
