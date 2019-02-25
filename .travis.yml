@@ -62,10 +62,14 @@ script:
 
 
 before_deploy:
-  - |
-    cd $TRAVIS_BUILD_DIR/dist
-    mv SourcetrailPythonIndexer ${PACKAGE_NAME}
-    zip -r ${PACKAGE_NAME} ${PACKAGE_NAME}
+  - cd $TRAVIS_BUILD_DIR/dist
+  - mv SourcetrailPythonIndexer ${PACKAGE_NAME}
+  - mkdir -p ${PACKAGE_NAME}/license/3rd_party_licenses
+  - cp ../LICENSE.txt ${PACKAGE_NAME}/license/
+  - cp ../SourcetrailDB/LICENSE.txt ${PACKAGE_NAME}/license/3rd_party_licenses/license_sourcetraildb.txt
+  - cp ../SourcetrailDB/external/cpp_sqlite/license_cpp_sqlite.txt ${PACKAGE_NAME}/license/3rd_party_licenses/
+  - cp ../SourcetrailDB/external/json/license_json.txt ${PACKAGE_NAME}/license/3rd_party_licenses/
+  - zip -r ${PACKAGE_NAME} ${PACKAGE_NAME}
 
 
 deploy:
