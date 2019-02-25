@@ -69,11 +69,15 @@ after_build:
     - mkdir artifacts
     - cd artifacts
     - mkdir %PACKAGE_NAME%
+    - cd %PACKAGE_NAME%
+    - mkdir license
+    - cd license
+    - mkdir 3rd_party_licenses
+    - cd ..
+    - cd ..
     - cd ..
     - ps: Copy-Item -Path dist/SourcetrailPythonIndexer/* -Recurse -Destination artifacts/$env:PACKAGE_NAME
-    - mkdir artifacts/$env:PACKAGE_NAME/license
     - ps: copy LICENSE.txt artifacts/$env:PACKAGE_NAME/license/
-    - mkdir artifacts/$env:PACKAGE_NAME/license/3rd_party_licenses
     - ps: copy SourcetrailDB/LICENSE.txt artifacts/$env:PACKAGE_NAME/license/3rd_party_licenses/license_sourcetraildb.txt
     - ps: copy SourcetrailDB/external/cpp_sqlite/license_cpp_sqlite.txt artifacts/$env:PACKAGE_NAME/license/3rd_party_licenses/
     - ps: copy SourcetrailDB/external/json/license_json.txt artifacts/$env:PACKAGE_NAME/license/3rd_party_licenses/
