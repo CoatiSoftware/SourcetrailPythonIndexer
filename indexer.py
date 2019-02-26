@@ -193,29 +193,40 @@ class AstVisitor:
 			if definition is None:
 				continue
 
-			if definition.line is None or definition.column is None:
-				# Early exit. For now we don't record references for names that don't have a valid definition location
-				continue
-
 			if definition.type in ['class', 'function']:
-				(startLine, startColumn) = node.start_pos
-				if definition.line == startLine and definition.column == startColumn:
-					# Early exit. We don't record references for locations of classes or functions that are definitions
-					continue
+				if definition.module_name != 'builtins':
+					(startLine, startColumn) = node.start_pos
+					if definition.line is None or definition.column is None:
+						# Early exit. For now we don't record references for non-builtins that don't have a valid definition location
+						continue
+					elif definition.line == startLine and definition.column == startColumn:
+						# Early exit. We don't record references for locations of classes or functions that are definitions
+						continue
 
 				if definition.type == 'class':
+					if definition.line is None or definition.column is None: # FIXME: remove this!
+						# Early exit. For now we don't record references for non-builtins that don't have a valid definition location
+						continue
 					if self.recordClassReference(node, definition) > 0:
 						return
 
 				elif definition.type == 'function':
-					if self.recordFunctonReference(node, definition) > 0:
+					if self.recordFunctionReference(node, definition) > 0:
 						return
 
 			elif definition.type == 'param':
+				if definition.line is None or definition.column is None:
+					# Early exit. For now we don't record references for names that don't have a valid definition location
+					continue
+
 				if self.recordParamReference(node, definition) > 0:
 					return
 
 			elif definition.type == 'statement':
+				if definition.line is None or definition.column is None:
+					# Early exit. For now we don't record references for names that don't have a valid definition location
+					continue
+
 				if self.recordStatementReference(node, definition) > 0:
 					return
 
@@ -273,18 +284,31 @@ class AstVisitor:
 		return referenceId
 
 
-	def recordFunctonReference(self, node, definition):
-		if definition is None or definition._name is None or definition._name.tree_name is None:
+	def recordFunctionReference(self, node, definition):
+		if definition is None:
 			return 0
 
-		definitionModulePath = definition.module_path
-		if definitionModulePath is None:
-			if self.sourceFilePath == _virtualFilePath:
-				definitionModulePath = self.sourceFilePath
-			else:
+		if definition.module_name == 'builtins' and definition.line is None and definition.column is None:
+			referencedNameHierarchy = NameHierarchy(NameElement(definition.module_name), '.')
+			for namePart in definition.full_name.split('.'):
+				referencedNameHierarchy.nameElements.append(NameElement(namePart))
+
+		else:
+			if definition.line is None or definition.column is None:
 				return 0
 
-		referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definitionModulePath)
+			if definition._name is None or definition._name.tree_name is None:
+				return 0
+
+			definitionModulePath = definition.module_path
+			if definitionModulePath is None:
+				if self.sourceFilePath == _virtualFilePath:
+					definitionModulePath = self.sourceFilePath
+				else:
+					return 0
+
+			referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definitionModulePath)
+
 		referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
 		# Record symbol kind. If the called function is within indexed code, we already have this info. In any other case, this is valuable info!
