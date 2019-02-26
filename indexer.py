@@ -134,6 +134,8 @@ class AstVisitor:
 			self.beginVisitFuncdef(node)
 		elif node.type == 'name':
 			self.beginVisitName(node)
+		elif node.type == 'string':
+			self.beginVisitString(node)
 		elif node.type == 'error_leaf':
 			self.beginVisitErrorLeaf(node)
 
@@ -147,6 +149,8 @@ class AstVisitor:
 			self.endVisitFuncdef(node)
 		elif node.type == 'name':
 			self.endVisitName(node)
+		elif node.type == 'string':
+			self.endVisitString(node)
 		elif node.type == 'error_leaf':
 			self.endVisitErrorLeaf(node)
 
@@ -224,6 +228,19 @@ class AstVisitor:
 					return
 
 	def endVisitName(self, node):
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			if node == contextNode:
+				self.contextStack.pop()
+
+
+	def beginVisitString(self, node):
+		sourceRange = getSourceRangeOfNode(node)
+		if sourceRange.startLine != sourceRange.endLine:
+			self.client.recordAtomicSourceRange(sourceRange)
+
+
+	def endVisitString(self, node):
 		if len(self.contextStack) > 0:
 			contextNode = self.contextStack[len(self.contextStack) - 1].node
 			if node == contextNode:
@@ -609,8 +626,8 @@ class AstVisitorClient:
 		)
 
 
-	def recordCommentLocation(self, sourceRange):
-		srctrl.recordCommentLocation(
+	def recordAtomicSourceRange(self, sourceRange):
+		srctrl.recordAtomicSourceRange(
 			self.indexedFileId,
 			sourceRange.startLine,
 			sourceRange.startColumn,
