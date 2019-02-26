@@ -194,19 +194,12 @@ class AstVisitor:
 				continue
 
 			if definition.type in ['class', 'function']:
-				if definition.module_name != 'builtins':
-					(startLine, startColumn) = node.start_pos
-					if definition.line is None or definition.column is None:
-						# Early exit. For now we don't record references for non-builtins that don't have a valid definition location
-						continue
-					elif definition.line == startLine and definition.column == startColumn:
-						# Early exit. We don't record references for locations of classes or functions that are definitions
-						continue
+				(startLine, startColumn) = node.start_pos
+				if definition.line == startLine and definition.column == startColumn:
+					# Early exit. We don't record references for locations of classes or functions that are definitions
+					continue
 
 				if definition.type == 'class':
-					if definition.line is None or definition.column is None: # FIXME: remove this!
-						# Early exit. For now we don't record references for non-builtins that don't have a valid definition location
-						continue
 					if self.recordClassReference(node, definition) > 0:
 						return
 
@@ -249,17 +242,10 @@ class AstVisitor:
 
 
 	def recordClassReference(self, node, definition):
-		if definition is None or definition._name is None or definition._name.tree_name is None:
+		referencedNameHierarchy = self.getNameHierarchyOfClassOrFunctionDefinition(definition)
+		if referencedNameHierarchy is None:
 			return 0
 
-		definitionModulePath = definition.module_path
-		if definitionModulePath is None:
-			if self.sourceFilePath == _virtualFilePath:
-				definitionModulePath = self.sourceFilePath
-			else:
-				return 0
-
-		referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definitionModulePath)
 		referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
 		# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
@@ -285,29 +271,9 @@ class AstVisitor:
 
 
 	def recordFunctionReference(self, node, definition):
-		if definition is None:
+		referencedNameHierarchy = self.getNameHierarchyOfClassOrFunctionDefinition(definition)
+		if referencedNameHierarchy is None:
 			return 0
-
-		if definition.module_name == 'builtins' and definition.line is None and definition.column is None:
-			referencedNameHierarchy = NameHierarchy(NameElement(definition.module_name), '.')
-			for namePart in definition.full_name.split('.'):
-				referencedNameHierarchy.nameElements.append(NameElement(namePart))
-
-		else:
-			if definition.line is None or definition.column is None:
-				return 0
-
-			if definition._name is None or definition._name.tree_name is None:
-				return 0
-
-			definitionModulePath = definition.module_path
-			if definitionModulePath is None:
-				if self.sourceFilePath == _virtualFilePath:
-					definitionModulePath = self.sourceFilePath
-				else:
-					return 0
-
-			referencedNameHierarchy = self.getNameHierarchyOfNode(definition._name.tree_name, definitionModulePath)
 
 		referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
@@ -406,6 +372,33 @@ class AstVisitor:
 			self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
 			# we don't return the 'localSymbolId' here, because we may also want to record additional definitions of the local local variable
 		return 0
+
+
+	def getNameHierarchyOfClassOrFunctionDefinition(self, definition):
+		if definition is None:
+			return None
+
+		if definition.module_name == 'builtins' and definition.line is None and definition.column is None:
+			nameHierarchy = NameHierarchy(NameElement(definition.module_name), '.')
+			for namePart in definition.full_name.split('.'):
+				nameHierarchy.nameElements.append(NameElement(namePart))
+			return nameHierarchy
+
+		else:
+			if definition.line is None or definition.column is None:
+				return None
+
+			if definition._name is None or definition._name.tree_name is None:
+				return None
+
+			definitionModulePath = definition.module_path
+			if definitionModulePath is None:
+				if self.sourceFilePath == _virtualFilePath:
+					definitionModulePath = self.sourceFilePath
+				else:
+					return None
+
+			return self.getNameHierarchyOfNode(definition._name.tree_name, definitionModulePath)
 
 
 	def getDefinitionsOfNode(self, node, nodeSourceFilePath):

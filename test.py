@@ -160,6 +160,13 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('TYPE_USAGE: virtual_file.py -> virtual_file.Bar at [4:7|4:9]' in client.references)
 
 
+	def test_indexer_records_usage_of_builtin_class(self):
+		client = self.indexSourceCode(
+			'foo = str(b"bar")\n'
+		)
+		self.assertTrue('TYPE_USAGE: virtual_file.py -> builtins.str at [1:7|1:9]' in client.references)
+
+
 	def test_indexer_records_call_to_builtin_function(self):
 		client = self.indexSourceCode(
 			'foo = "test string".islower()\n'
