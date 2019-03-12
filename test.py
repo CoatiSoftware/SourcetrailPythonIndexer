@@ -127,6 +127,20 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording References
 
+	def test_indexer_records_import_of_builtin_module(self):
+		client = self.indexSourceCode(
+			'import sys\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> sys at [1:8|1:10]' in client.references)
+
+
+	def test_indexer_records_import_of_custom_module(self):
+		client = self.indexSourceCode(
+			'import string\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> string at [1:8|1:13]' in client.references)
+
+
 	def test_indexer_records_single_class_inheritence(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
@@ -157,21 +171,21 @@ class TestPythonIndexer(unittest.TestCase):
 			'\n'
 			'bar = Bar()\n'
 		)
-		self.assertTrue('TYPE_USAGE: virtual_file.py -> virtual_file.Bar at [4:7|4:9]' in client.references)
+		self.assertTrue('TYPE_USAGE: virtual_file -> virtual_file.Bar at [4:7|4:9]' in client.references)
 
 
 	def test_indexer_records_usage_of_builtin_class(self):
 		client = self.indexSourceCode(
 			'foo = str(b"bar")\n'
 		)
-		self.assertTrue('TYPE_USAGE: virtual_file.py -> builtins.str at [1:7|1:9]' in client.references)
+		self.assertTrue('TYPE_USAGE: virtual_file -> builtins.str at [1:7|1:9]' in client.references)
 
 
 	def test_indexer_records_call_to_builtin_function(self):
 		client = self.indexSourceCode(
 			'foo = "test string".islower()\n'
 		)
-		self.assertTrue('CALL: virtual_file.py -> builtins.str.islower at [1:21|1:27]' in client.references)
+		self.assertTrue('CALL: virtual_file -> builtins.str.islower at [1:21|1:27]' in client.references)
 
 
 	def test_indexer_records_function_call(self):
@@ -181,7 +195,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'\n'
 			'main()\n'
 		)
-		self.assertTrue('CALL: virtual_file.py -> virtual_file.main at [4:1|4:4]' in client.references)
+		self.assertTrue('CALL: virtual_file -> virtual_file.main at [4:1|4:4]' in client.references)
 
 
 	def test_indexer_does_not_record_static_field_initialization_as_usage(self):

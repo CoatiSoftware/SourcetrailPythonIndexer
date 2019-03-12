@@ -122,6 +122,7 @@ class AstVisitor:
 		self.client.recordSymbolKind(moduleId, srctrl.SYMBOL_MODULE)
 
 		self.contextStack.append(ContextInfo(fileId, None))
+		self.contextStack.append(ContextInfo(moduleId, None))
 
 
 	def traverseNode(self, node):
@@ -132,6 +133,8 @@ class AstVisitor:
 			self.beginVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.beginVisitFuncdef(node)
+		if node.type == 'import_name':
+			self.beginVisitImportName(node)
 		elif node.type == 'name':
 			self.beginVisitName(node)
 		elif node.type == 'string':
@@ -147,6 +150,8 @@ class AstVisitor:
 			self.endVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
+		if node.type == 'import_name':
+			self.endVisitImportName(node)
 		elif node.type == 'name':
 			self.endVisitName(node)
 		elif node.type == 'string':
@@ -189,6 +194,17 @@ class AstVisitor:
 				self.contextStack.pop()
 
 
+	def beginVisitImportName(self, node):
+		pass
+
+
+	def endVisitImportName(self, node):
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			if node == contextNode:
+				self.contextStack.pop()
+
+
 	def beginVisitName(self, node):
 		if len(self.contextStack) == 0:
 			return
@@ -196,6 +212,35 @@ class AstVisitor:
 		for definition in self.getDefinitionsOfNode(node, self.sourceFilePath):
 			if definition is None:
 				continue
+
+			if definition.type == 'module':
+				if node.parent is not None:
+					if node.parent.type == 'import_name': # FIXME: handle all cases described here: https://realpython.com/python-modules-packages/#python-packages
+						if definition.module_path is not None:
+							moduleName = getModuleNameForFilePath(definition.module_path)
+						else:
+							moduleName = definition.name #  FIXME: this also needs to be done in normal name solving ("import sys; sys.foo()")
+
+						referencedNameHierarchy = NameHierarchy(NameElement(moduleName), '.')
+						if referencedNameHierarchy is None:
+							continue
+
+						referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
+
+						# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
+						# self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE) FIXME: re-add this line, once Sourcetrail displays modules as nodes
+
+						referenceId = self.client.recordReference(
+							self.contextStack[len(self.contextStack) - 1].id,
+							referencedSymbolId,
+							srctrl.REFERENCE_IMPORT
+						)
+
+						self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+
+
+
+
 
 			if definition.type in ['class', 'function']:
 				(startLine, startColumn) = node.start_pos
