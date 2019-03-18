@@ -200,7 +200,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'from sys import float_info\n'
 		)
 		self.assertTrue('USAGE: virtual_file -> sys at [1:6|1:8]' in client.references)
-		self.assertTrue('USAGE: virtual_file -> sys.float_info at [1:17|1:26]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> sys.float_info at [1:17|1:26]' in client.references)
 
 
 	def test_indexer_records_import_of_aliased_variable(self):
@@ -208,8 +208,8 @@ class TestPythonIndexer(unittest.TestCase):
 			'from sys import float_info as FI\n'
 		)
 		self.assertTrue('USAGE: virtual_file -> sys at [1:6|1:8]' in client.references)
-		self.assertTrue('USAGE: virtual_file -> sys.float_info at [1:17|1:26]' in client.references)
-		self.assertTrue('USAGE: virtual_file -> sys.float_info at [1:31|1:32]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> sys.float_info at [1:17|1:26]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> sys.float_info at [1:31|1:32]' in client.references)
 
 
 	def test_indexer_records_import_of_multiple_aliased_variables_with_single_import_statement(self):
@@ -217,10 +217,10 @@ class TestPythonIndexer(unittest.TestCase):
 			'from sys import float_info as FI, api_version as AI\n'
 		)
 		self.assertTrue('USAGE: virtual_file -> sys at [1:6|1:8]' in client.references)
-		self.assertTrue('USAGE: virtual_file -> sys.float_info at [1:17|1:26]' in client.references)
-		self.assertTrue('USAGE: virtual_file -> sys.float_info at [1:31|1:32]' in client.references)
-		self.assertTrue('USAGE: virtual_file -> sys.api_version at [1:35|1:45]' in client.references)
-		self.assertTrue('USAGE: virtual_file -> sys.api_version at [1:50|1:51]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> sys.float_info at [1:17|1:26]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> sys.float_info at [1:31|1:32]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> sys.api_version at [1:35|1:45]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> sys.api_version at [1:50|1:51]' in client.references)
 
 
 	def test_indexer_records_import_of_class(self):

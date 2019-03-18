@@ -210,10 +210,16 @@ class AstVisitor:
 						referencedSymbolId = self.client.recordSymbol(nameHierarchy)
 						self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
 
+						referenceKind = srctrl.REFERENCE_USAGE
+						if getParentWithType(node, 'import_from') is not None:
+							# this would be the case for "from foo import f as my_f"
+							#                                             ^    ^
+							referenceKind = srctrl.REFERENCE_IMPORT
+
 						referenceId = self.client.recordReference(
 							self.contextStack[len(self.contextStack) - 1].id,
 							referencedSymbolId,
-							srctrl.REFERENCE_USAGE
+							referenceKind
 						)
 						self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
 
@@ -394,9 +400,9 @@ class AstVisitor:
 			else:
 				return 0
 
-		recordAsGlobal = False
-		recordAsField = False
-		recordAsReference = False
+		symbolKind = None
+		referenceKind = None
+		definitionKind = None
 
 		definitionNameNode = definition._name.tree_name
 		namedDefinitionParentNode = getParentWithTypeInList(definitionNameNode, ['classdef', 'funcdef'])
@@ -405,12 +411,11 @@ class AstVisitor:
 				# definition is a static member variable
 				if definitionNameNode.start_pos == node.start_pos and definitionNameNode.end_pos == node.end_pos:
 					# node is the definition of the static member variable
-					recordAsField = True
-					recordAsReference = False
+					symbolKind = srctrl.SYMBOL_FIELD
+					definitionKind = srctrl.DEFINITION_EXPLICIT
 				else:
 					# node is a usage of the static member variable
-					recordAsField = False
-					recordAsReference = True
+					referenceKind = srctrl.REFERENCE_USAGE
 			elif namedDefinitionParentNode.type in ['funcdef']:
 				# definition may be a non-static member variable
 				if definitionNameNode.parent is not None and definitionNameNode.parent.type == 'trailer':
@@ -426,41 +431,47 @@ class AstVisitor:
 										preceedingNode = paramDefinitionNameNode.parent.get_previous_sibling()
 										if preceedingNode is not None and preceedingNode.type != 'param':
 											# 'paramDefinitionNameNode' is the first parameter of a member function (aka. 'self')
-											recordAsReference = True
+											referenceKind = srctrl.REFERENCE_USAGE
 											if definitionNameNode.start_pos == node.start_pos and definitionNameNode.end_pos == node.end_pos:
-												recordAsField = True
-											else:
-												recordAsField = False
+												symbolKind = srctrl.SYMBOL_FIELD
+												definitionKind = srctrl.DEFINITION_EXPLICIT
 		else:
-			recordAsGlobal = True
+			symbolKind = srctrl.SYMBOL_GLOBAL_VARIABLE
+			if definitionNameNode.start_pos == node.start_pos and definitionNameNode.end_pos == node.end_pos:
+				# node is the definition of a global variable
+				definitionKind = srctrl.DEFINITION_EXPLICIT
+			elif getParentWithType(node, 'import_from') is not None:
+				# this would be the case for "from foo import f as my_f"
+				#                                             ^    ^
+				referenceKind = srctrl.REFERENCE_IMPORT
+			else:
+				referenceKind = srctrl.REFERENCE_USAGE
 
 		sourceRange = getSourceRangeOfNode(node)
 
-		if recordAsGlobal or recordAsField or recordAsReference:
+		if symbolKind is not None or referenceKind is not None:
 			symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(definitionNameNode, definitionModulePath))
-			if recordAsGlobal:
-				self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
-				self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
+
+			if symbolKind is not None:
+				self.client.recordSymbolKind(symbolId, symbolKind)
+
+			if definitionKind is not None:
+				self.client.recordSymbolDefinitionKind(symbolId, definitionKind)
 				self.client.recordSymbolLocation(symbolId, sourceRange)
 
-			if recordAsField:
-				self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
-				self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
-				self.client.recordSymbolLocation(symbolId, sourceRange)
-
-			if recordAsReference:
+			if referenceKind is not None:
 				contextInfo = self.contextStack[len(self.contextStack) - 1]
 				referenceId = self.client.recordReference(
 					contextInfo.id,
 					symbolId,
-					srctrl.REFERENCE_USAGE
+					referenceKind
 				)
 				self.client.recordReferenceLocation(referenceId, sourceRange)
 			return symbolId
 		else:
 			localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, getSourceRangeOfNode(definitionNameNode)))
 			self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
-			# we don't return the 'localSymbolId' here, because we may also want to record additional definitions of the local local variable
+			# we don't return the 'localSymbolId' here, because we may also want to record additional definitions of the local variable (see caller)
 		return 0
 
 
