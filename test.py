@@ -129,16 +129,24 @@ class TestPythonIndexer(unittest.TestCase):
 
 	def test_indexer_records_import_of_builtin_module(self):
 		client = self.indexSourceCode(
-			'import sys\n'
+			'import itertools\n'
 		)
-		self.assertTrue('IMPORT: virtual_file -> sys at [1:8|1:10]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:8|1:16]' in client.references)
 
 
 	def test_indexer_records_import_of_custom_module(self):
 		client = self.indexSourceCode(
-			'import string\n'
+			'import re\n'
 		)
-		self.assertTrue('IMPORT: virtual_file -> string at [1:8|1:13]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re at [1:8|1:9]' in client.references)
+
+
+	def test_indexer_records_import_of_multiple_modules_with_single_import_statement(self):
+		client = self.indexSourceCode(
+			'import itertools, re\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:8|1:16]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re at [1:19|1:20]' in client.references)
 
 
 	def test_indexer_records_single_class_inheritence(self):

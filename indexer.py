@@ -215,7 +215,8 @@ class AstVisitor:
 
 			if definition.type == 'module':
 				if node.parent is not None:
-					if node.parent.type == 'import_name': # FIXME: handle all cases described here: https://realpython.com/python-modules-packages/#python-packages
+					if (node.parent.type == 'import_name') or \
+						(node.parent.type == 'dotted_as_names' and node.parent.parent is not None and node.parent.parent.type == 'import_name'):
 						if definition.module_path is not None:
 							moduleName = getModuleNameForFilePath(definition.module_path)
 						else:
