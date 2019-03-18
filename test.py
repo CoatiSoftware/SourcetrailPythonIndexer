@@ -251,6 +251,14 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re.RegexFlag at [1:44|1:45]' in client.references)
 
 
+	def test_indexer_records_usage_of_imported_module(self):
+		client = self.indexSourceCode(
+			'import sys\n'
+			'dir(sys)\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> sys at [2:5|2:7]' in client.references)
+
+
 	def test_indexer_records_single_class_inheritence(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'

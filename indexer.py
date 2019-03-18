@@ -219,36 +219,30 @@ class AstVisitor:
 						self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
 
 			elif definition.type == 'module':
-				importNode = getParentWithTypeInList(node, ['import_name', 'import_from'])
-				if importNode is not None:
-					if definition.module_path is not None:
-						moduleName = getModuleNameForFilePath(definition.module_path)
-					else:
-						moduleName = definition.module_name
+				referenceKind = srctrl.REFERENCE_USAGE
+				if getParentWithType(node, 'import_name') is not None:
+					# this would be the case for "import foo"
+					#                                    ^
+					referenceKind = srctrl.REFERENCE_IMPORT
 
-					referencedNameHierarchy = NameHierarchy(NameElement(moduleName), '.')
+				if definition.module_path is not None:
+					moduleName = getModuleNameForFilePath(definition.module_path)
+				else:
+					moduleName = definition.module_name
 
-					referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
+				referencedNameHierarchy = NameHierarchy(NameElement(moduleName), '.')
+				referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
-					# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
-					self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
+				# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
+				self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
 
-					if importNode.type == 'import_name':
-						# this would be the case for "import foo"
-						#                                    ^
-						referenceKind = srctrl.REFERENCE_IMPORT
-					elif importNode.type == 'import_from':
-						# this would be the case for "from foo import bar"
-						#                                  ^
-						referenceKind = srctrl.REFERENCE_USAGE
+				referenceId = self.client.recordReference(
+					self.contextStack[len(self.contextStack) - 1].id,
+					referencedSymbolId,
+					referenceKind
+				)
 
-					referenceId = self.client.recordReference(
-						self.contextStack[len(self.contextStack) - 1].id,
-						referencedSymbolId,
-						referenceKind
-					)
-
-					self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+				self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
 
 			elif definition.type in ['class', 'function']:
 				(startLine, startColumn) = node.start_pos
