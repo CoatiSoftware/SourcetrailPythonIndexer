@@ -17,6 +17,13 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('MODULE: virtual_file' in client.symbols)
 
 
+	def test_indexer_records_module_scope_variable_as_global_variable(self):
+		client = self.indexSourceCode(
+			'foo = 9:\n'
+		)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.foo at [1:1|1:3]' in client.symbols)
+
+
 	def test_indexer_records_function_definition(self):
 		client = self.indexSourceCode(
 			'def foo():\n'
@@ -61,7 +68,7 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording Local Symbols
 
-	def test_indexer_records_usage_of_variable_with_multiple_definitions_as_multiple_global_symbols(self):
+	def test_indexer_records_usage_of_variable_with_multiple_definitions_as_multiple_local_symbols(self):
 		client = self.indexSourceCode(
 			'def foo(bar):\n'
 			'	if bar:\n'
@@ -74,13 +81,6 @@ class TestPythonIndexer(unittest.TestCase):
 		)
 		self.assertTrue('virtual_file.py<3:3> at [6:9|6:11]' in client.localSymbols)
 		self.assertTrue('virtual_file.py<5:3> at [6:9|6:11]' in client.localSymbols)
-
-
-	def test_indexer_records_module_scope_variable_as_global_variable(self):
-		client = self.indexSourceCode(
-			'foo = 9:\n'
-		)
-		self.assertTrue('GLOBAL_VARIABLE: virtual_file.foo at [1:1|1:3]' in client.symbols)
 
 
 	def test_indexer_records_function_parameter_as_local_symbol(self):
@@ -274,7 +274,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('INHERITANCE: virtual_file.Baz -> virtual_file.Bar at [5:16|5:18]' in client.references)
 
 
-	def test_indexer_records_class_instantiation(self):
+	def test_indexer_records_instantiation_of_custom_class(self):
 		client = self.indexSourceCode(
 			'class Bar:\n'
 			'	pass\n'
@@ -282,6 +282,14 @@ class TestPythonIndexer(unittest.TestCase):
 			'bar = Bar()\n'
 		)
 		self.assertTrue('TYPE_USAGE: virtual_file -> virtual_file.Bar at [4:7|4:9]' in client.references)
+
+
+	def test_indexer_records_instantiation_of_environment_class(self):
+		client = self.indexSourceCode(
+			'import sys\n'
+			'sys.__loader__()\n'
+		)
+		self.assertTrue('TYPE_USAGE: virtual_file -> sys.__loader__ at [2:5|2:14]' in client.references)
 
 
 	def test_indexer_records_usage_of_builtin_class(self):
@@ -296,6 +304,14 @@ class TestPythonIndexer(unittest.TestCase):
 			'foo = "test string".islower()\n'
 		)
 		self.assertTrue('CALL: virtual_file -> builtins.str.islower at [1:21|1:27]' in client.references)
+
+
+	def test_indexer_records_call_to_environment_function(self):
+		client = self.indexSourceCode(
+			'import sys\n'
+			'sys.callstats()\n'
+		)
+		self.assertTrue('CALL: virtual_file -> sys.callstats at [2:5|2:13]' in client.references)
 
 
 	def test_indexer_records_function_call(self):

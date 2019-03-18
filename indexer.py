@@ -200,12 +200,7 @@ class AstVisitor:
 
 			if definition.type == 'instance':
 				if definition.line is None and definition.column is None:
-					nameHierarchy = None
-					for namePart in definition.full_name.split('.'):
-						if nameHierarchy is None:
-							nameHierarchy = NameHierarchy(NameElement(namePart), '.')
-						else:
-							nameHierarchy.nameElements.append(NameElement(namePart))
+					nameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
 					if nameHierarchy is not None:
 						referencedSymbolId = self.client.recordSymbol(nameHierarchy)
 						self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
@@ -229,11 +224,9 @@ class AstVisitor:
 					if definition.module_path is not None:
 						moduleName = getModuleNameForFilePath(definition.module_path)
 					else:
-						moduleName = definition.name #  FIXME: this also needs to be done in normal name solving ("import sys; sys.foo()")
+						moduleName = definition.module_name
 
 					referencedNameHierarchy = NameHierarchy(NameElement(moduleName), '.')
-					if referencedNameHierarchy is None:
-						continue
 
 					referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
@@ -475,20 +468,30 @@ class AstVisitor:
 		return 0
 
 
+	def getNameHierarchyFromFullNameOfDefinition(self, definition):
+		nameHierarchy = None
+		for namePart in definition.full_name.split('.'):
+			if nameHierarchy is None:
+				nameHierarchy = NameHierarchy(NameElement(namePart), '.')
+			else:
+				nameHierarchy.nameElements.append(NameElement(namePart))
+		return nameHierarchy
+
+
 	def getNameHierarchyOfClassOrFunctionDefinition(self, definition):
 		if definition is None:
 			return None
 
-		if definition.module_name == 'builtins' and definition.line is None and definition.column is None:
-			nameHierarchy = NameHierarchy(NameElement(definition.module_name), '.')
-			for namePart in definition.full_name.split('.'):
-				nameHierarchy.nameElements.append(NameElement(namePart))
-			return nameHierarchy
+		if definition.line is None and definition.column is None:
+			if definition.module_name == 'builtins':
+				nameHierarchy = NameHierarchy(NameElement(definition.module_name), '.')
+				for namePart in definition.full_name.split('.'):
+					nameHierarchy.nameElements.append(NameElement(namePart))
+				return nameHierarchy
+			else:
+				return self.getNameHierarchyFromFullNameOfDefinition(definition)
 
 		else:
-			if definition.line is None or definition.column is None:
-				return None
-
 			if definition._name is None or definition._name.tree_name is None:
 				return None
 
