@@ -214,7 +214,8 @@ class AstVisitor:
 				continue
 
 			if definition.type == 'module':
-				if getParentWithTypeInList(node, 'import_name') is not None:
+				importNode = getParentWithTypeInList(node, ['import_name', 'import_from'])
+				if importNode is not None:
 					if definition.module_path is not None:
 						moduleName = getModuleNameForFilePath(definition.module_path)
 					else:
@@ -229,10 +230,17 @@ class AstVisitor:
 					# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
 					# self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE) FIXME: re-add this line, once Sourcetrail displays modules as nodes
 
+					if importNode.type == 'import_name':
+						# this would be the case for "import foo"
+						referenceType = srctrl.REFERENCE_IMPORT
+					if importNode.type == 'import_from':
+						# this would be the case for "from foo import bar"
+						referenceType = srctrl.REFERENCE_USAGE
+
 					referenceId = self.client.recordReference(
 						self.contextStack[len(self.contextStack) - 1].id,
 						referencedSymbolId,
-						srctrl.REFERENCE_IMPORT
+						referenceType
 					)
 
 					self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
@@ -346,6 +354,9 @@ class AstVisitor:
 		if nextNode is not None and nextNode.type == 'trailer':
 			if len(nextNode.children) >= 2 and nextNode.children[0].value == '(' and nextNode.children[len(nextNode.children) - 1].value == ')':
 				referenceKind = srctrl.REFERENCE_CALL
+
+		elif getParentWithType(node, 'import_from'):
+			referenceKind = srctrl.REFERENCE_IMPORT
 
 		if referenceKind is not -1:
 			referenceId = self.client.recordReference(
@@ -464,7 +475,14 @@ class AstVisitor:
 
 	def getDefinitionsOfNode(self, node, nodeSourceFilePath):
 		(startLine, startColumn) = node.start_pos
-		if self.sourceFileContent is None: # we are indexing a real file
+		if nodeSourceFilePath == _virtualFilePath: # we are indexing a provided code snippet
+			script = jedi.Script(
+				source = self.sourceFileContent,
+				line = startLine,
+				column = startColumn,
+				environment = self.environment
+			)
+		else: # we are indexing a real file
 			script = jedi.Script(
 				source = None,
 				line = startLine,
@@ -472,13 +490,6 @@ class AstVisitor:
 				path = nodeSourceFilePath,
 				environment = self.environment
 			) # todo: provide a sys_path parameter here
-		else: # we are indexing a provided code snippet
-			script = jedi.Script(
-				source = self.sourceFileContent,
-				line = startLine,
-				column = startColumn,
-				environment = self.environment
-			)
 		return script.goto_assignments(follow_imports=True)
 
 
