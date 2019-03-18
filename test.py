@@ -127,6 +127,102 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording References
 
+	def test_indexer_records_import_of_builtin_module(self):
+		client = self.indexSourceCode(
+			'import itertools\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:8|1:16]' in client.references)
+
+
+	def test_indexer_records_import_of_custom_module(self):
+		client = self.indexSourceCode(
+			'import re\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> re at [1:8|1:9]' in client.references)
+
+
+	def test_indexer_records_import_of_multiple_modules_with_single_import_statement(self):
+		client = self.indexSourceCode(
+			'import itertools, re\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:8|1:16]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re at [1:19|1:20]' in client.references)
+
+
+	def test_indexer_records_import_of_aliased_module(self):
+		client = self.indexSourceCode(
+			'import itertools as it\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:8|1:16]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:21|1:22]' in client.references)
+
+
+	def test_indexer_records_import_of_multiple_alised_modules_with_single_import_statement(self):
+		client = self.indexSourceCode(
+			'import itertools as it, re as regex\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:8|1:16]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:21|1:22]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re at [1:25|1:26]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re at [1:31|1:35]' in client.references)
+
+
+	def test_indexer_records_import_of_function(self):
+		client = self.indexSourceCode(
+			'from re import match\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.match at [1:16|1:20]' in client.references)
+
+
+	def test_indexer_records_import_of_aliased_function(self):
+		client = self.indexSourceCode(
+			'from re import match as m\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.match at [1:16|1:20]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.match at [1:25|1:25]' in client.references)
+
+
+	def test_indexer_records_import_of_multiple_aliased_functions_with_single_import_statement(self):
+		client = self.indexSourceCode(
+			'from re import match as m, escape as e\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.match at [1:16|1:20]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.match at [1:25|1:25]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.escape at [1:28|1:33]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.escape at [1:38|1:38]' in client.references)
+
+
+	def test_indexer_records_import_of_class(self):
+		client = self.indexSourceCode(
+			'from re import Scanner\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:16|1:22]' in client.references)
+
+
+	def test_indexer_records_import_of_aliased_class(self):
+		client = self.indexSourceCode(
+			'from re import Scanner as Sc\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:16|1:22]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:27|1:28]' in client.references)
+
+
+	def test_indexer_records_import_of_multiple_aliased_classes_with_single_import_statement(self):
+		client = self.indexSourceCode(
+			'from re import Scanner as Sc, RegexFlag as RF\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:16|1:22]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:27|1:28]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.RegexFlag at [1:31|1:39]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.RegexFlag at [1:44|1:45]' in client.references)
+
+
 	def test_indexer_records_single_class_inheritence(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
@@ -157,21 +253,21 @@ class TestPythonIndexer(unittest.TestCase):
 			'\n'
 			'bar = Bar()\n'
 		)
-		self.assertTrue('TYPE_USAGE: virtual_file.py -> virtual_file.Bar at [4:7|4:9]' in client.references)
+		self.assertTrue('TYPE_USAGE: virtual_file -> virtual_file.Bar at [4:7|4:9]' in client.references)
 
 
 	def test_indexer_records_usage_of_builtin_class(self):
 		client = self.indexSourceCode(
 			'foo = str(b"bar")\n'
 		)
-		self.assertTrue('TYPE_USAGE: virtual_file.py -> builtins.str at [1:7|1:9]' in client.references)
+		self.assertTrue('TYPE_USAGE: virtual_file -> builtins.str at [1:7|1:9]' in client.references)
 
 
 	def test_indexer_records_call_to_builtin_function(self):
 		client = self.indexSourceCode(
 			'foo = "test string".islower()\n'
 		)
-		self.assertTrue('CALL: virtual_file.py -> builtins.str.islower at [1:21|1:27]' in client.references)
+		self.assertTrue('CALL: virtual_file -> builtins.str.islower at [1:21|1:27]' in client.references)
 
 
 	def test_indexer_records_function_call(self):
@@ -181,7 +277,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'\n'
 			'main()\n'
 		)
-		self.assertTrue('CALL: virtual_file.py -> virtual_file.main at [4:1|4:4]' in client.references)
+		self.assertTrue('CALL: virtual_file -> virtual_file.main at [4:1|4:4]' in client.references)
 
 
 	def test_indexer_does_not_record_static_field_initialization_as_usage(self):
@@ -325,32 +421,36 @@ class TestAstVisitorClient():
 
 		self.references = []
 		for key in self.referenceIdsToData:
-			referenceString = ''
+			if 'reference_location' not in self.referenceIdsToData[key] or len(self.referenceIdsToData[key]['reference_location']) == 0:
+				self.referenceIdsToData[key]['reference_location'].append('')
 
-			if 'reference_kind' in self.referenceIdsToData[key]:
-				referenceString += self.referenceIdsToData[key]['reference_kind'] + ': '
-			else:
-				referenceString += 'REFERENCE: '
+			for referenceLocation in self.referenceIdsToData[key]['reference_location']:
+				referenceString = ''
 
-			if 'context_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['context_symbol_id'] in self.symbolIdsToData:
-				referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['context_symbol_id']]['name']
-			else:
-				referenceString += 'UNKNOWN SYMBOL'
+				if 'reference_kind' in self.referenceIdsToData[key]:
+					referenceString += self.referenceIdsToData[key]['reference_kind'] + ': '
+				else:
+					referenceString += 'REFERENCE: '
 
-			referenceString += ' -> '
+				if 'context_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['context_symbol_id'] in self.symbolIdsToData:
+					referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['context_symbol_id']]['name']
+				else:
+					referenceString += 'UNKNOWN SYMBOL'
 
-			if 'referenced_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['referenced_symbol_id'] in self.symbolIdsToData:
-				referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['referenced_symbol_id']]['name']
-			else:
-				referenceString += 'UNKNOWN SYMBOL'
+				referenceString += ' -> '
 
-			if 'reference_location' in self.referenceIdsToData[key]:
-				referenceString += ' at ' + self.referenceIdsToData[key]['reference_location']
+				if 'referenced_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['referenced_symbol_id'] in self.symbolIdsToData:
+					referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['referenced_symbol_id']]['name']
+				else:
+					referenceString += 'UNKNOWN SYMBOL'
 
-			referenceString = referenceString.strip()
+				if referenceLocation:
+					referenceString += ' at ' + referenceLocation
 
-			if referenceString:
-				self.references.append(referenceString)
+				referenceString = referenceString.strip()
+
+				if referenceString:
+					self.references.append(referenceString)
 
 
 	def getNextElementId(self):
@@ -410,14 +510,15 @@ class TestAstVisitorClient():
 			'id': referenceId,
 			'context_symbol_id': contextSymbolId,
 			'referenced_symbol_id': referencedSymbolId,
-			'reference_kind': referenceKindToString(referenceKind)
+			'reference_kind': referenceKindToString(referenceKind),
+			'reference_location': []
 		}
 		return referenceId
 
 
 	def recordReferenceLocation(self, referenceId, sourceRange):
 		if referenceId in self.referenceIdsToData:
-			self.referenceIdsToData[referenceId]['reference_location'] = sourceRange.toString()
+			self.referenceIdsToData[referenceId]['reference_location'].append(sourceRange.toString())
 
 
 	def recordFile(self, filePath):
