@@ -214,30 +214,28 @@ class AstVisitor:
 				continue
 
 			if definition.type == 'module':
-				if node.parent is not None:
-					if (node.parent.type == 'import_name') or \
-						(node.parent.type == 'dotted_as_names' and node.parent.parent is not None and node.parent.parent.type == 'import_name'):
-						if definition.module_path is not None:
-							moduleName = getModuleNameForFilePath(definition.module_path)
-						else:
-							moduleName = definition.name #  FIXME: this also needs to be done in normal name solving ("import sys; sys.foo()")
+				if getParentWithTypeInList(node, 'import_name') is not None:
+					if definition.module_path is not None:
+						moduleName = getModuleNameForFilePath(definition.module_path)
+					else:
+						moduleName = definition.name #  FIXME: this also needs to be done in normal name solving ("import sys; sys.foo()")
 
-						referencedNameHierarchy = NameHierarchy(NameElement(moduleName), '.')
-						if referencedNameHierarchy is None:
-							continue
+					referencedNameHierarchy = NameHierarchy(NameElement(moduleName), '.')
+					if referencedNameHierarchy is None:
+						continue
 
-						referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
+					referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
-						# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
-						# self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE) FIXME: re-add this line, once Sourcetrail displays modules as nodes
+					# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
+					# self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE) FIXME: re-add this line, once Sourcetrail displays modules as nodes
 
-						referenceId = self.client.recordReference(
-							self.contextStack[len(self.contextStack) - 1].id,
-							referencedSymbolId,
-							srctrl.REFERENCE_IMPORT
-						)
+					referenceId = self.client.recordReference(
+						self.contextStack[len(self.contextStack) - 1].id,
+						referencedSymbolId,
+						srctrl.REFERENCE_IMPORT
+					)
 
-						self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+					self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
 
 
 

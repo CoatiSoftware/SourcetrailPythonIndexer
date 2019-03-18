@@ -149,6 +149,24 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re at [1:19|1:20]' in client.references)
 
 
+	def test_indexer_records_import_of_module_for_import_alias(self):
+		client = self.indexSourceCode(
+			'import itertools as it\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:8|1:16]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:21|1:22]' in client.references)
+
+
+	def test_indexer_records_import_of_multiple_modules_for_import_alias_with_single_import_statement(self):
+		client = self.indexSourceCode(
+			'import itertools as it, re as regex\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:8|1:16]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> itertools at [1:21|1:22]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re at [1:25|1:26]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re at [1:31|1:35]' in client.references)
+
+
 	def test_indexer_records_single_class_inheritence(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
@@ -347,32 +365,36 @@ class TestAstVisitorClient():
 
 		self.references = []
 		for key in self.referenceIdsToData:
-			referenceString = ''
+			if 'reference_location' not in self.referenceIdsToData[key] or len(self.referenceIdsToData[key]['reference_location']) == 0:
+				self.referenceIdsToData[key]['reference_location'].append('')
 
-			if 'reference_kind' in self.referenceIdsToData[key]:
-				referenceString += self.referenceIdsToData[key]['reference_kind'] + ': '
-			else:
-				referenceString += 'REFERENCE: '
+			for referenceLocation in self.referenceIdsToData[key]['reference_location']:
+				referenceString = ''
 
-			if 'context_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['context_symbol_id'] in self.symbolIdsToData:
-				referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['context_symbol_id']]['name']
-			else:
-				referenceString += 'UNKNOWN SYMBOL'
+				if 'reference_kind' in self.referenceIdsToData[key]:
+					referenceString += self.referenceIdsToData[key]['reference_kind'] + ': '
+				else:
+					referenceString += 'REFERENCE: '
 
-			referenceString += ' -> '
+				if 'context_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['context_symbol_id'] in self.symbolIdsToData:
+					referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['context_symbol_id']]['name']
+				else:
+					referenceString += 'UNKNOWN SYMBOL'
 
-			if 'referenced_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['referenced_symbol_id'] in self.symbolIdsToData:
-				referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['referenced_symbol_id']]['name']
-			else:
-				referenceString += 'UNKNOWN SYMBOL'
+				referenceString += ' -> '
 
-			if 'reference_location' in self.referenceIdsToData[key]:
-				referenceString += ' at ' + self.referenceIdsToData[key]['reference_location']
+				if 'referenced_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['referenced_symbol_id'] in self.symbolIdsToData:
+					referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['referenced_symbol_id']]['name']
+				else:
+					referenceString += 'UNKNOWN SYMBOL'
 
-			referenceString = referenceString.strip()
+				if referenceLocation:
+					referenceString += ' at ' + referenceLocation
 
-			if referenceString:
-				self.references.append(referenceString)
+				referenceString = referenceString.strip()
+
+				if referenceString:
+					self.references.append(referenceString)
 
 
 	def getNextElementId(self):
@@ -432,14 +454,15 @@ class TestAstVisitorClient():
 			'id': referenceId,
 			'context_symbol_id': contextSymbolId,
 			'referenced_symbol_id': referencedSymbolId,
-			'reference_kind': referenceKindToString(referenceKind)
+			'reference_kind': referenceKindToString(referenceKind),
+			'reference_location': []
 		}
 		return referenceId
 
 
 	def recordReferenceLocation(self, referenceId, sourceRange):
 		if referenceId in self.referenceIdsToData:
-			self.referenceIdsToData[referenceId]['reference_location'] = sourceRange.toString()
+			self.referenceIdsToData[referenceId]['reference_location'].append(sourceRange.toString())
 
 
 	def recordFile(self, filePath):
