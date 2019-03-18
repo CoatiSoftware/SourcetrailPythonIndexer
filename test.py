@@ -195,6 +195,34 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re.escape at [1:38|1:38]' in client.references)
 
 
+	def test_indexer_records_import_of_class(self):
+		client = self.indexSourceCode(
+			'from re import Scanner\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:16|1:22]' in client.references)
+
+
+	def test_indexer_records_import_of_aliased_class(self):
+		client = self.indexSourceCode(
+			'from re import Scanner as Sc\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:16|1:22]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:27|1:28]' in client.references)
+
+
+	def test_indexer_records_import_of_multiple_aliased_classes_with_single_import_statement(self):
+		client = self.indexSourceCode(
+			'from re import Scanner as Sc, RegexFlag as RF\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:16|1:22]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:27|1:28]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.RegexFlag at [1:31|1:39]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.RegexFlag at [1:44|1:45]' in client.references)
+
+
 	def test_indexer_records_single_class_inheritence(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'

@@ -232,24 +232,22 @@ class AstVisitor:
 
 					if importNode.type == 'import_name':
 						# this would be the case for "import foo"
-						referenceType = srctrl.REFERENCE_IMPORT
-					if importNode.type == 'import_from':
+						#                                    ^
+						referenceKind = srctrl.REFERENCE_IMPORT
+					elif importNode.type == 'import_from':
 						# this would be the case for "from foo import bar"
-						referenceType = srctrl.REFERENCE_USAGE
+						#                                  ^
+						referenceKind = srctrl.REFERENCE_USAGE
 
 					referenceId = self.client.recordReference(
 						self.contextStack[len(self.contextStack) - 1].id,
 						referencedSymbolId,
-						referenceType
+						referenceKind
 					)
 
 					self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
 
-
-
-
-
-			if definition.type in ['class', 'function']:
+			elif definition.type in ['class', 'function']:
 				(startLine, startColumn) = node.start_pos
 				if definition.line == startLine and definition.column == startColumn:
 					# Early exit. We don't record references for locations of classes or functions that are definitions
@@ -320,19 +318,25 @@ class AstVisitor:
 		# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
 		self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_CLASS)
 
-		referenceType = srctrl.REFERENCE_TYPE_USAGE
+		referenceKind = srctrl.REFERENCE_TYPE_USAGE
 		if node.parent is not None:
 			if node.parent.type == 'classdef':
 				# this would be the case for "class Foo(Bar)"
-				referenceType = srctrl.REFERENCE_INHERITANCE
-			if node.parent.type == 'arglist' and node.parent.parent is not None and node.parent.parent.type == 'classdef':
+				#                                       ^
+				referenceKind = srctrl.REFERENCE_INHERITANCE
+			elif node.parent.type == 'arglist' and node.parent.parent is not None and node.parent.parent.type == 'classdef':
 				# this would be the case for "class Foo(Bar, Baz)"
-				referenceType = srctrl.REFERENCE_INHERITANCE
+				#                                       ^    ^
+				referenceKind = srctrl.REFERENCE_INHERITANCE
+			elif getParentWithType(node, 'import_from') is not None:
+				# this would be the case for "from foo import Foo as F"
+				#                                             ^      ^
+				referenceKind = srctrl.REFERENCE_IMPORT
 
 		referenceId = self.client.recordReference(
 			self.contextStack[len(self.contextStack) - 1].id,
 			referencedSymbolId,
-			referenceType
+			referenceKind
 		)
 
 		self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
@@ -354,7 +358,6 @@ class AstVisitor:
 		if nextNode is not None and nextNode.type == 'trailer':
 			if len(nextNode.children) >= 2 and nextNode.children[0].value == '(' and nextNode.children[len(nextNode.children) - 1].value == ')':
 				referenceKind = srctrl.REFERENCE_CALL
-
 		elif getParentWithType(node, 'import_from'):
 			referenceKind = srctrl.REFERENCE_IMPORT
 
