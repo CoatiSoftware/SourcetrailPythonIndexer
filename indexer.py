@@ -331,7 +331,8 @@ class AstVisitor:
 			else:
 				return 0
 
-		recordAsSymbol = False
+		recordAsGlobal = False
+		recordAsField = False
 		recordAsReference = False
 
 		definitionNameNode = definition._name.tree_name
@@ -340,10 +341,12 @@ class AstVisitor:
 			if namedDefinitionParentNode.type in ['classdef']:
 				# definition is a static member variable
 				if definitionNameNode.start_pos == node.start_pos and definitionNameNode.end_pos == node.end_pos:
-					recordAsSymbol = True
+					# node is the definition of the static member variable
+					recordAsField = True
 					recordAsReference = False
 				else:
-					recordAsSymbol = False
+					# node is a usage of the static member variable
+					recordAsField = False
 					recordAsReference = True
 			elif namedDefinitionParentNode.type in ['funcdef']:
 				# definition may be a non-static member variable
@@ -362,15 +365,22 @@ class AstVisitor:
 											# 'paramDefinitionNameNode' is the first parameter of a member function (aka. 'self')
 											recordAsReference = True
 											if definitionNameNode.start_pos == node.start_pos and definitionNameNode.end_pos == node.end_pos:
-												recordAsSymbol = True
+												recordAsField = True
 											else:
-												recordAsSymbol = False
+												recordAsField = False
+		else:
+			recordAsGlobal = True
 
 		sourceRange = getSourceRangeOfNode(node)
 
-		if recordAsSymbol or recordAsReference:
+		if recordAsGlobal or recordAsField or recordAsReference:
 			symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(definitionNameNode, definitionModulePath))
-			if recordAsSymbol:
+			if recordAsGlobal:
+				self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
+				self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
+				self.client.recordSymbolLocation(symbolId, sourceRange)
+
+			if recordAsField:
 				self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 				self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
 				self.client.recordSymbolLocation(symbolId, sourceRange)
