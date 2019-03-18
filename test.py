@@ -76,11 +76,11 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.py<5:3> at [6:9|6:11]' in client.localSymbols)
 
 
-	def test_indexer_records_global_variable_as_local_symbol(self):
+	def test_indexer_records_module_scope_variable_as_global_variable(self):
 		client = self.indexSourceCode(
 			'foo = 9:\n'
 		)
-		self.assertTrue('virtual_file.py<1:1> at [1:1|1:3]' in client.localSymbols)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.foo at [1:1|1:3]' in client.symbols)
 
 
 	def test_indexer_records_function_parameter_as_local_symbol(self):
@@ -107,7 +107,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.py<2:2> at [2:2|2:2]' in client.localSymbols)
 
 
-	def test_indexer_records_usage_of_variable_as_local_symbol(self):
+	def test_indexer_records_usage_of_function_scope_variable_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'def foo():\n'
 			'	x = 5\n'
