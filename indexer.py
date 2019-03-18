@@ -133,8 +133,6 @@ class AstVisitor:
 			self.beginVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.beginVisitFuncdef(node)
-		if node.type == 'import_name':
-			self.beginVisitImportName(node)
 		elif node.type == 'name':
 			self.beginVisitName(node)
 		elif node.type == 'string':
@@ -150,8 +148,6 @@ class AstVisitor:
 			self.endVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
-		if node.type == 'import_name':
-			self.endVisitImportName(node)
 		elif node.type == 'name':
 			self.endVisitName(node)
 		elif node.type == 'string':
@@ -194,17 +190,6 @@ class AstVisitor:
 				self.contextStack.pop()
 
 
-	def beginVisitImportName(self, node):
-		pass
-
-
-	def endVisitImportName(self, node):
-		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
-			if node == contextNode:
-				self.contextStack.pop()
-
-
 	def beginVisitName(self, node):
 		if len(self.contextStack) == 0:
 			return
@@ -213,7 +198,26 @@ class AstVisitor:
 			if definition is None:
 				continue
 
-			if definition.type == 'module':
+			if definition.type == 'instance':
+				if definition.line is None and definition.column is None:
+					nameHierarchy = None
+					for namePart in definition.full_name.split('.'):
+						if nameHierarchy is None:
+							nameHierarchy = NameHierarchy(NameElement(namePart), '.')
+						else:
+							nameHierarchy.nameElements.append(NameElement(namePart))
+					if nameHierarchy is not None:
+						referencedSymbolId = self.client.recordSymbol(nameHierarchy)
+						self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
+
+						referenceId = self.client.recordReference(
+							self.contextStack[len(self.contextStack) - 1].id,
+							referencedSymbolId,
+							srctrl.REFERENCE_USAGE
+						)
+						self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+
+			elif definition.type == 'module':
 				importNode = getParentWithTypeInList(node, ['import_name', 'import_from'])
 				if importNode is not None:
 					if definition.module_path is not None:
@@ -228,7 +232,7 @@ class AstVisitor:
 					referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
 					# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
-					# self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE) FIXME: re-add this line, once Sourcetrail displays modules as nodes
+					self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
 
 					if importNode.type == 'import_name':
 						# this would be the case for "import foo"
@@ -276,6 +280,7 @@ class AstVisitor:
 
 				if self.recordStatementReference(node, definition) > 0:
 					return
+
 
 	def endVisitName(self, node):
 		if len(self.contextStack) > 0:
