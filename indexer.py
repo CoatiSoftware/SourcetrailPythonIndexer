@@ -4,6 +4,7 @@ import os
 import sys
 
 import sourcetraildb as srctrl
+from jedi._compatibility import all_suffixes
 
 _virtualFilePath = 'virtual_file.py'
 
@@ -55,9 +56,9 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
 	)
 
 	if (isVerbose):
-		astVisitor = VerboseAstVisitor(astVisitorClient, environment, sourceFilePath, sourceCode)
+		astVisitor = VerboseAstVisitor(astVisitorClient, evaluator, sourceFilePath, sourceCode)
 	else:
-		astVisitor = AstVisitor(astVisitorClient, environment, sourceFilePath, sourceCode)
+		astVisitor = AstVisitor(astVisitorClient, evaluator, sourceFilePath, sourceCode)
 
 	astVisitor.traverseNode(module_node)
 
@@ -88,9 +89,9 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 	)
 
 	if (isVerbose):
-		astVisitor = VerboseAstVisitor(astVisitorClient, environment, sourceFilePath)
+		astVisitor = VerboseAstVisitor(astVisitorClient, evaluator, sourceFilePath)
 	else:
-		astVisitor = AstVisitor(astVisitorClient, environment, sourceFilePath)
+		astVisitor = AstVisitor(astVisitorClient, evaluator, sourceFilePath)
 
 	astVisitor.traverseNode(module_node)
 
@@ -104,12 +105,16 @@ class ContextInfo:
 
 class AstVisitor:
 
-	def __init__(self, client, environment, sourceFilePath, sourceFileContent = None):
+	def __init__(self, client, evaluator, sourceFilePath, sourceFileContent = None):
 		self.client = client
-		self.environment = environment
+		self.environment = evaluator.environment
 		self.sourceFilePath = sourceFilePath.replace('\\', '/')
 		self.sourceFileName = self.sourceFilePath.rsplit('/', 1).pop()
 		self.sourceFileContent = sourceFileContent
+		self.sysPath = [os.path.abspath(os.path.dirname(self.sourceFilePath))]
+		baseSysPath = evaluator.project._get_base_sys_path(self.environment)
+		baseSysPath.sort(reverse=True)
+		self.sysPath += baseSysPath
 		self.contextStack = []
 
 		fileId = self.client.recordFile(self.sourceFilePath)
@@ -117,7 +122,7 @@ class AstVisitor:
 			print('ERROR: ' + srctrl.getLastError())
 		self.client.recordFileLanguage(fileId, 'python')
 
-		moduleId = self.client.recordSymbol(NameHierarchy(NameElement(getModuleNameForFilePath(self.sourceFilePath)), "."))
+		moduleId = self.client.recordSymbol(self.getNameHierarchyFromModuleFilePath(self.sourceFilePath))
 		self.client.recordSymbolDefinitionKind(moduleId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(moduleId, srctrl.SYMBOL_MODULE)
 
@@ -225,12 +230,9 @@ class AstVisitor:
 					#                                    ^
 					referenceKind = srctrl.REFERENCE_IMPORT
 
-				if definition.module_path is not None:
-					moduleName = getModuleNameForFilePath(definition.module_path)
-				else:
-					moduleName = definition.module_name
-
-				referencedNameHierarchy = NameHierarchy(NameElement(moduleName), '.')
+				referencedNameHierarchy = self.getNameHierarchyFromModulePathOfDefinition(definition)
+				if referencedNameHierarchy is None:
+					referencedNameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
 				referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
 				# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
@@ -462,6 +464,47 @@ class AstVisitor:
 		return 0
 
 
+	def getNameHierarchyFromModuleFilePath(self, filePath):
+		filePath = os.path.abspath(filePath)
+		# First remove the suffix.
+		for suffix in all_suffixes():
+			if filePath.endswith(suffix):
+				filePath = filePath[:-len(suffix)]
+				break
+
+		for p in self.sysPath:
+			if filePath.startswith(p):
+				rest = filePath[len(p):]
+				if rest.startswith(os.path.sep):
+					# Remove a slash in cases it's still there.
+					rest = rest[1:]
+				if rest:
+					split = rest.split(os.path.sep)
+					for string in split:
+						if not string:
+							return None
+
+					if split[-1] == '__init__':
+						split = split[:-1]
+
+					nameHierarchy = None
+					for namePart in split:
+						if nameHierarchy is None:
+							nameHierarchy = NameHierarchy(NameElement(namePart), '.')
+						else:
+							nameHierarchy.nameElements.append(NameElement(namePart))
+					return nameHierarchy
+		return None
+
+
+	def getNameHierarchyFromModulePathOfDefinition(self, definition):
+		nameHierarchy = self.getNameHierarchyFromModuleFilePath(definition.module_path)
+		if nameHierarchy is not None:
+			if nameHierarchy.nameElements[-1].name != definition.name:
+				nameHierarchy.nameElements.append(NameElement(definition.name))
+		return nameHierarchy
+
+
 	def getNameHierarchyFromFullNameOfDefinition(self, definition):
 		nameHierarchy = None
 		for namePart in definition.full_name.split('.'):
@@ -576,7 +619,7 @@ class AstVisitor:
 					parentNodeNameHierarchy.nameElements.append(nameElement)
 					return parentNodeNameHierarchy
 
-			nameHierarchy = NameHierarchy(NameElement(getModuleNameForFilePath(nodeSourceFilePath)), '.')
+			nameHierarchy = self.getNameHierarchyFromModuleFilePath(nodeSourceFilePath)
 			nameHierarchy.nameElements.append(nameElement)
 			return nameHierarchy
 
@@ -585,8 +628,8 @@ class AstVisitor:
 
 class VerboseAstVisitor(AstVisitor):
 
-	def __init__(self, client, environment, sourceFilePath, sourceFileContent = None):
-		AstVisitor.__init__(self, client, environment, sourceFilePath, sourceFileContent)
+	def __init__(self, client, evaluator, sourceFilePath, sourceFileContent = None):
+		AstVisitor.__init__(self, client, evaluator, sourceFilePath, sourceFileContent)
 		self.indentationLevel = 0
 		self.indentationToken = '| '
 
@@ -795,13 +838,6 @@ class NameHierarchyEncoder(json.JSONEncoder):
 			}
 		# Let the base class default method raise the TypeError
 		return json.JSONEncoder.default(self, obj)
-
-
-def getModuleNameForFilePath(filePath):
-	filePath = filePath.replace('\\', '/') # convert slashes
-	fileName = filePath.rsplit('/', 1).pop() # remove path
-	moduleName = fileName.rsplit('.', 1)[0] # remove extension
-	return moduleName
 
 
 def getSourceRangeOfNode(node):
