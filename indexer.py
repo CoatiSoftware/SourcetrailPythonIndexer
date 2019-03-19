@@ -592,11 +592,18 @@ class VerboseAstVisitor(AstVisitor):
 
 
 	def traverseNode(self, node):
-		currentIndentation = ''
+		currentString = ''
 		for i in range(0, self.indentationLevel):
-			currentIndentation += self.indentationToken
+			currentString += self.indentationToken
 
-		print('AST: ' + currentIndentation + node.type)
+		currentString += node.type
+
+		if hasattr(node, 'value'):
+			currentString += ' ("' + node.value + '")'
+
+		currentString += ' ' + getSourceRangeOfNode(node).toString()
+
+		print('AST: ' + currentString)
 
 		self.indentationLevel += 1
 		AstVisitor.traverseNode(self, node)
