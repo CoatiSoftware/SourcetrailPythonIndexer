@@ -599,7 +599,7 @@ class VerboseAstVisitor(AstVisitor):
 		currentString += node.type
 
 		if hasattr(node, 'value'):
-			currentString += ' ("' + node.value + '")'
+			currentString += ' (' + repr(node.value) + ')'
 
 		currentString += ' ' + getSourceRangeOfNode(node).toString()
 
