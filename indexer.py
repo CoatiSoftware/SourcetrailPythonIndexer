@@ -235,27 +235,33 @@ class AstVisitor:
 						self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
 
 			elif definition.type == 'module':
-				referenceKind = srctrl.REFERENCE_USAGE
-				if getParentWithType(node, 'import_name') is not None:
-					# this would be the case for "import foo"
-					#                                    ^
-					referenceKind = srctrl.REFERENCE_IMPORT
-
 				referencedNameHierarchy = self.getNameHierarchyFromModulePathOfDefinition(definition)
 				if referencedNameHierarchy is None:
 					referencedNameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
 				referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
-				# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
-				self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
+				nextNode = getNext(node)
+				if nextNode is not None and nextNode.type == 'trailer':
+					nextNode = getNext(nextNode)
+				if nextNode is not None and nextNode.type == 'operator' and nextNode.value == '.':
+					self.client.recordQualifierLocation(referencedSymbolId, getSourceRangeOfNode(node))
+				else:
+					referenceKind = srctrl.REFERENCE_USAGE
+					if getParentWithType(node, 'import_name') is not None:
+						# this would be the case for "import foo"
+						#                                    ^
+						referenceKind = srctrl.REFERENCE_IMPORT
 
-				referenceId = self.client.recordReference(
-					self.contextStack[len(self.contextStack) - 1].id,
-					referencedSymbolId,
-					referenceKind
-				)
+					# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
+					self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
 
-				self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+					referenceId = self.client.recordReference(
+						self.contextStack[len(self.contextStack) - 1].id,
+						referencedSymbolId,
+						referenceKind
+					)
+
+					self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
 
 			elif definition.type in ['class', 'function']:
 				(startLine, startColumn) = node.start_pos
@@ -740,6 +746,17 @@ class AstVisitorClient:
 	def recordReferenceLocation(self, referenceId, sourceRange):
 		srctrl.recordReferenceLocation(
 			referenceId,
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
+			sourceRange.endColumn
+		)
+
+
+	def recordQualifierLocation(self, referencedSymbolId, sourceRange):
+		return srctrl.recordQualifierLocation(
+			referencedSymbolId,
 			self.indexedFileId,
 			sourceRange.startLine,
 			sourceRange.startColumn,
