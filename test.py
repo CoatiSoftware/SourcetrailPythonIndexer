@@ -360,6 +360,32 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [3:8|3:8]' in client.references)
 
 
+# Test Package and Module Names
+
+	def test_indexer_resolves_packge_name_relative_to_sys_path(self):
+		client = self.indexSourceCode(
+			'import pkg\n'
+			'c = pkg.PackageLevelClass()\n'
+			'print(c.field)\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertTrue('NON-INDEXED MODULE: pkg' in client.symbols)
+		self.assertTrue('NON-INDEXED CLASS: pkg.PackageLevelClass' in client.symbols)
+		self.assertTrue('NON-INDEXED SYMBOL: pkg.PackageLevelClass.field' in client.symbols)
+
+
+	def test_indexer_resolves_module_name_relative_to_sys_path(self):
+		client = self.indexSourceCode(
+			'import pkg.mod\n'
+			'c = pkg.mod.ModuleLevelClass()\n'
+			'print(c.field)\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertTrue('NON-INDEXED MODULE: pkg.mod' in client.symbols)
+		self.assertTrue('NON-INDEXED CLASS: pkg.mod.ModuleLevelClass' in client.symbols)
+		self.assertTrue('NON-INDEXED SYMBOL: pkg.mod.ModuleLevelClass.field' in client.symbols)
+
+
 # Test Atomic Ranges
 
 	def test_indexer_records_atomic_range_for_multi_line_string(self):
@@ -394,7 +420,7 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Utility Functions
 
-	def indexSourceCode(self, sourceCode, verbose = False):
+	def indexSourceCode(self, sourceCode, sysPath = None, verbose = False):
 		workingDirectory = os.getcwd()
 		astVisitorClient = TestAstVisitorClient()
 
@@ -402,7 +428,8 @@ class TestPythonIndexer(unittest.TestCase):
 			sourceCode,
 			workingDirectory,
 			astVisitorClient,
-			verbose
+			verbose,
+			sysPath
 		)
 
 		astVisitorClient.updateReadableOutput()

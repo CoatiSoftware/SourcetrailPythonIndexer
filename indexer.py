@@ -35,7 +35,7 @@ def getEnvironment():
 	raise jedi.InvalidPythonEnvironment("Cannot find executable python.")
 
 
-def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
+def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, sysPath = None):
 	sourceFilePath = _virtualFilePath
 
 	environment = getEnvironment()
@@ -56,9 +56,9 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose):
 	)
 
 	if (isVerbose):
-		astVisitor = VerboseAstVisitor(astVisitorClient, evaluator, sourceFilePath, sourceCode)
+		astVisitor = VerboseAstVisitor(astVisitorClient, evaluator, sourceFilePath, sourceCode, sysPath)
 	else:
-		astVisitor = AstVisitor(astVisitorClient, evaluator, sourceFilePath, sourceCode)
+		astVisitor = AstVisitor(astVisitorClient, evaluator, sourceFilePath, sourceCode, sysPath)
 
 	astVisitor.traverseNode(module_node)
 
@@ -105,16 +105,27 @@ class ContextInfo:
 
 class AstVisitor:
 
-	def __init__(self, client, evaluator, sourceFilePath, sourceFileContent = None):
+	def __init__(self, client, evaluator, sourceFilePath, sourceFileContent = None, sysPath = None):
+
 		self.client = client
 		self.environment = evaluator.environment
-		self.sourceFilePath = sourceFilePath.replace('\\', '/')
-		self.sourceFileName = self.sourceFilePath.rsplit('/', 1).pop()
+
+		self.sourceFilePath = sourceFilePath
+		if sourceFilePath != _virtualFilePath:
+			self.sourceFilePath = os.path.abspath(self.sourceFilePath)
+
+		self.sourceFileName = os.path.split(self.sourceFilePath)[-1]
 		self.sourceFileContent = sourceFileContent
-		self.sysPath = [os.path.abspath(os.path.dirname(self.sourceFilePath))]
-		baseSysPath = evaluator.project._get_base_sys_path(self.environment)
-		baseSysPath.sort(reverse=True)
-		self.sysPath += baseSysPath
+
+		self.sysPath = [os.path.dirname(self.sourceFilePath)]
+		if sysPath is not None:
+			self.sysPath.extend(sysPath)
+		else:
+			baseSysPath = evaluator.project._get_base_sys_path(self.environment)
+			baseSysPath.sort(reverse=True)
+			self.sysPath.extend(baseSysPath)
+		self.sysPath = list(filter(None, self.sysPath))
+
 		self.contextStack = []
 
 		fileId = self.client.recordFile(self.sourceFilePath)
@@ -465,6 +476,9 @@ class AstVisitor:
 
 
 	def getNameHierarchyFromModuleFilePath(self, filePath):
+		if filePath == _virtualFilePath:
+			return NameHierarchy(NameElement(os.path.splitext(_virtualFilePath)[0]), '.')
+
 		filePath = os.path.abspath(filePath)
 		# First remove the suffix.
 		for suffix in all_suffixes():
@@ -494,7 +508,7 @@ class AstVisitor:
 						else:
 							nameHierarchy.nameElements.append(NameElement(namePart))
 					return nameHierarchy
-		return None
+		return None # TODO: return 'unsolved-symbol' here
 
 
 	def getNameHierarchyFromModulePathOfDefinition(self, definition):
@@ -549,7 +563,8 @@ class AstVisitor:
 				source = self.sourceFileContent,
 				line = startLine,
 				column = startColumn,
-				environment = self.environment
+				environment = self.environment,
+				sys_path = self.sysPath
 			)
 		else: # we are indexing a real file
 			script = jedi.Script(
@@ -557,8 +572,9 @@ class AstVisitor:
 				line = startLine,
 				column = startColumn,
 				path = nodeSourceFilePath,
-				environment = self.environment
-			) # todo: provide a sys_path parameter here
+				environment = self.environment,
+				sys_path = self.sysPath
+			)
 		return script.goto_assignments(follow_imports=True)
 
 
@@ -628,8 +644,8 @@ class AstVisitor:
 
 class VerboseAstVisitor(AstVisitor):
 
-	def __init__(self, client, evaluator, sourceFilePath, sourceFileContent = None):
-		AstVisitor.__init__(self, client, evaluator, sourceFilePath, sourceFileContent)
+	def __init__(self, client, evaluator, sourceFilePath, sourceFileContent = None, sysPath = None):
+		AstVisitor.__init__(self, client, evaluator, sourceFilePath, sourceFileContent, sysPath)
 		self.indentationLevel = 0
 		self.indentationToken = '| '
 
