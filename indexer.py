@@ -749,7 +749,7 @@ class AstVisitorClient:
 
 
 	def recordFile(self, filePath):
-		self.indexedFileId = srctrl.recordFile(filePath)
+		self.indexedFileId = srctrl.recordFile(filePath.replace('\\', '/'))
 		srctrl.recordFileLanguage(self.indexedFileId, 'python')
 		return self.indexedFileId
 
