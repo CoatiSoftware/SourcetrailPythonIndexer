@@ -360,6 +360,32 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [3:8|3:8]' in client.references)
 
 
+# Test Qualifiers
+
+	def test_indexer_records_module_as_qualifier_in_import_statement(self):
+		client = self.indexSourceCode(
+			'import pkg.mod\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertTrue('pkg at [1:8|1:10]' in client.qualifiers)
+
+
+	def test_indexer_records_module_as_qualifier_in_expression_statement(self):
+		client = self.indexSourceCode(
+			'import sys\n'
+			'print(sys.executable)\n'
+		)
+		self.assertTrue('sys at [2:7|2:9]' in client.qualifiers)
+
+
+	def test_indexer_records_class_as_qualifier_in_expression_statement(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	bar = 0\n'
+			'baz = Foo.bar\n'
+		)
+		self.assertTrue('virtual_file.Foo at [3:7|3:9]' in client.qualifiers)
+
 # Test Package and Module Names
 
 	def test_indexer_resolves_packge_name_relative_to_sys_path(self):
@@ -442,6 +468,7 @@ class TestAstVisitorClient():
 		self.symbols = []
 		self.localSymbols = []
 		self.references = []
+		self.qualifiers = []
 		self.atomicSourceRanges = []
 		self.errors = []
 
@@ -451,6 +478,7 @@ class TestAstVisitorClient():
 		self.localSymbolIdsToData = {}
 		self.serializedReferencesToIds = {}
 		self.referenceIdsToData = {}
+		self.qualifierIdsToData = {}
 
 		self.nextSymbolId = 1
 
@@ -509,7 +537,7 @@ class TestAstVisitorClient():
 				if 'reference_kind' in self.referenceIdsToData[key]:
 					referenceString += self.referenceIdsToData[key]['reference_kind'] + ': '
 				else:
-					referenceString += 'REFERENCE: '
+					referenceString += 'UNKNOWN REFERENCE: '
 
 				if 'context_symbol_id' in self.referenceIdsToData[key] and self.referenceIdsToData[key]['context_symbol_id'] in self.symbolIdsToData:
 					referenceString += self.symbolIdsToData[self.referenceIdsToData[key]['context_symbol_id']]['name']
@@ -530,6 +558,21 @@ class TestAstVisitorClient():
 
 				if referenceString:
 					self.references.append(referenceString)
+
+		self.qualifiers = []
+		for key in self.qualifierIdsToData:
+			symbolName = 'UNKNOWN SYMBOL'
+			if 'id' in self.qualifierIdsToData[key] and self.qualifierIdsToData[key]['id'] in self.symbolIdsToData:
+				symbolName = self.symbolIdsToData[self.qualifierIdsToData[key]['id']]['name']
+
+			for qualifierLocation in self.qualifierIdsToData[key]['qualifier_locations']:
+				qualifierString = symbolName
+
+				if qualifierLocation:
+					qualifierString += ' at ' + qualifierLocation
+
+				if qualifierString:
+					self.qualifiers.append(qualifierString)
 
 
 	def getNextElementId(self):
@@ -598,6 +641,15 @@ class TestAstVisitorClient():
 	def recordReferenceLocation(self, referenceId, sourceRange):
 		if referenceId in self.referenceIdsToData:
 			self.referenceIdsToData[referenceId]['reference_location'].append(sourceRange.toString())
+
+
+	def recordQualifierLocation(self, referencedSymbolId, sourceRange):
+		if referencedSymbolId not in self.qualifierIdsToData:
+			self.qualifierIdsToData[referencedSymbolId] = {
+				'id': referencedSymbolId,
+				'qualifier_locations': []
+			}
+		self.qualifierIdsToData[referencedSymbolId]['qualifier_locations'].append(sourceRange.toString())
 
 
 	def recordFile(self, filePath):
