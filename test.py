@@ -373,11 +373,18 @@ class TestPythonIndexer(unittest.TestCase):
 	def test_indexer_records_module_as_qualifier_in_expression_statement(self):
 		client = self.indexSourceCode(
 			'import sys\n'
-			'print(sys.executable)\n',
-			None, True
+			'print(sys.executable)\n'
 		)
 		self.assertTrue('sys at [2:7|2:9]' in client.qualifiers)
 
+
+	def test_indexer_records_class_as_qualifier_in_expression_statement(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	bar = 0\n'
+			'baz = Foo.bar\n'
+		)
+		self.assertTrue('virtual_file.Foo at [3:7|3:9]' in client.qualifiers)
 
 # Test Package and Module Names
 

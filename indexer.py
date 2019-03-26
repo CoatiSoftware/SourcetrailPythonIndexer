@@ -240,10 +240,10 @@ class AstVisitor:
 					referencedNameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
 				referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
-				nextNode = getNext(node)
-				if nextNode is not None and nextNode.type == 'trailer':
-					nextNode = getNext(nextNode)
-				if nextNode is not None and nextNode.type == 'operator' and nextNode.value == '.':
+				# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
+				self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
+
+				if isQualifierNode(node):
 					self.client.recordQualifierLocation(referencedSymbolId, getSourceRangeOfNode(node))
 				else:
 					referenceKind = srctrl.REFERENCE_USAGE
@@ -251,9 +251,6 @@ class AstVisitor:
 						# this would be the case for "import foo"
 						#                                    ^
 						referenceKind = srctrl.REFERENCE_IMPORT
-
-					# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
-					self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
 
 					referenceId = self.client.recordReference(
 						self.contextStack[len(self.contextStack) - 1].id,
@@ -270,11 +267,11 @@ class AstVisitor:
 					continue
 
 				if definition.type == 'class':
-					if self.recordClassReference(node, definition) > 0:
+					if self.recordClassReference(node, definition):
 						return
 
 				elif definition.type == 'function':
-					if self.recordFunctionReference(node, definition) > 0:
+					if self.recordFunctionReference(node, definition):
 						return
 
 			elif definition.type == 'param':
@@ -282,7 +279,7 @@ class AstVisitor:
 					# Early exit. For now we don't record references for names that don't have a valid definition location
 					continue
 
-				if self.recordParamReference(node, definition) > 0:
+				if self.recordParamReference(node, definition):
 					return
 
 			elif definition.type == 'statement':
@@ -290,7 +287,7 @@ class AstVisitor:
 					# Early exit. For now we don't record references for names that don't have a valid definition location
 					continue
 
-				if self.recordStatementReference(node, definition) > 0:
+				if self.recordStatementReference(node, definition):
 					return
 
 
@@ -328,42 +325,45 @@ class AstVisitor:
 	def recordClassReference(self, node, definition):
 		referencedNameHierarchy = self.getNameHierarchyOfClassOrFunctionDefinition(definition)
 		if referencedNameHierarchy is None:
-			return 0
+			return False
 
 		referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
 		# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
 		self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_CLASS)
 
-		referenceKind = srctrl.REFERENCE_TYPE_USAGE
-		if node.parent is not None:
-			if node.parent.type == 'classdef':
-				# this would be the case for "class Foo(Bar)"
-				#                                       ^
-				referenceKind = srctrl.REFERENCE_INHERITANCE
-			elif node.parent.type == 'arglist' and node.parent.parent is not None and node.parent.parent.type == 'classdef':
-				# this would be the case for "class Foo(Bar, Baz)"
-				#                                       ^    ^
-				referenceKind = srctrl.REFERENCE_INHERITANCE
-			elif getParentWithType(node, 'import_from') is not None:
-				# this would be the case for "from foo import Foo as F"
-				#                                             ^      ^
-				referenceKind = srctrl.REFERENCE_IMPORT
+		if isQualifierNode(node):
+			self.client.recordQualifierLocation(referencedSymbolId, getSourceRangeOfNode(node))
+		else:
+			referenceKind = srctrl.REFERENCE_TYPE_USAGE
+			if node.parent is not None:
+				if node.parent.type == 'classdef':
+					# this would be the case for "class Foo(Bar)"
+					#                                       ^
+					referenceKind = srctrl.REFERENCE_INHERITANCE
+				elif node.parent.type == 'arglist' and node.parent.parent is not None and node.parent.parent.type == 'classdef':
+					# this would be the case for "class Foo(Bar, Baz)"
+					#                                       ^    ^
+					referenceKind = srctrl.REFERENCE_INHERITANCE
+				elif getParentWithType(node, 'import_from') is not None:
+					# this would be the case for "from foo import Foo as F"
+					#                                             ^      ^
+					referenceKind = srctrl.REFERENCE_IMPORT
 
-		referenceId = self.client.recordReference(
-			self.contextStack[len(self.contextStack) - 1].id,
-			referencedSymbolId,
-			referenceKind
-		)
+			referenceId = self.client.recordReference(
+				self.contextStack[len(self.contextStack) - 1].id,
+				referencedSymbolId,
+				referenceKind
+			)
 
-		self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
-		return referenceId
+			self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+		return True
 
 
 	def recordFunctionReference(self, node, definition):
 		referencedNameHierarchy = self.getNameHierarchyOfClassOrFunctionDefinition(definition)
 		if referencedNameHierarchy is None:
-			return 0
+			return False
 
 		referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
@@ -378,24 +378,24 @@ class AstVisitor:
 		elif getParentWithType(node, 'import_from'):
 			referenceKind = srctrl.REFERENCE_IMPORT
 
-		if referenceKind is not -1:
-			referenceId = self.client.recordReference(
-				self.contextStack[len(self.contextStack) - 1].id,
-				referencedSymbolId,
-				referenceKind
-			)
+		if referenceKind is -1:
+			return False
 
-			self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+		referenceId = self.client.recordReference(
+			self.contextStack[len(self.contextStack) - 1].id,
+			referencedSymbolId,
+			referenceKind
+		)
 
-			return referenceId
-		return 0
+		self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+		return True
 
 
 	def recordParamReference(self, node, definition):
 		definitionNameNode = definition._name.tree_name
 		localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, getSourceRangeOfNode(definitionNameNode)))
 		self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
-		return localSymbolId
+		return True
 
 
 	def recordStatementReference(self, node, definition):
@@ -404,7 +404,7 @@ class AstVisitor:
 			if self.sourceFilePath == _virtualFilePath:
 				definitionModulePath = self.sourceFilePath
 			else:
-				return 0
+				return False
 
 		symbolKind = None
 		referenceKind = None
@@ -473,12 +473,12 @@ class AstVisitor:
 					referenceKind
 				)
 				self.client.recordReferenceLocation(referenceId, sourceRange)
-			return symbolId
+			return True
 		else:
 			localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, getSourceRangeOfNode(definitionNameNode)))
 			self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
-			# we don't return the 'localSymbolId' here, because we may also want to record additional definitions of the local variable (see caller)
-		return 0
+		# we don't return the 'True' here, because we may also want to record additional definitions of the local variable (see caller)
+		return False
 
 
 	def getNameHierarchyFromModuleFilePath(self, filePath):
@@ -871,6 +871,15 @@ class NameHierarchyEncoder(json.JSONEncoder):
 			}
 		# Let the base class default method raise the TypeError
 		return json.JSONEncoder.default(self, obj)
+
+
+def isQualifierNode(node):
+	nextNode = getNext(node)
+	if nextNode is not None and nextNode.type == 'trailer':
+		nextNode = getNext(nextNode)
+	if nextNode is not None and nextNode.type == 'operator' and nextNode.value == '.':
+		return True
+	return False
 
 
 def getSourceRangeOfNode(node):
