@@ -2,7 +2,7 @@ import indexer
 import multiprocessing
 import os
 import sourcetraildb as srctrl
-
+import sys
 import unittest
 
 
@@ -242,13 +242,13 @@ class TestPythonIndexer(unittest.TestCase):
 
 	def test_indexer_records_import_of_multiple_aliased_classes_with_single_import_statement(self):
 		client = self.indexSourceCode(
-			'from re import Scanner as Sc, RegexFlag as RF\n'
+			'from re import Scanner as S1, Scanner as S2\n'
 		)
 		self.assertTrue('USAGE: virtual_file -> re at [1:6|1:7]' in client.references)
 		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:16|1:22]' in client.references)
 		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:27|1:28]' in client.references)
-		self.assertTrue('IMPORT: virtual_file -> re.RegexFlag at [1:31|1:39]' in client.references)
-		self.assertTrue('IMPORT: virtual_file -> re.RegexFlag at [1:44|1:45]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:31|1:37]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:42|1:43]' in client.references)
 
 
 	def test_indexer_records_usage_of_imported_module(self):
@@ -741,4 +741,4 @@ def referenceKindToString(referenceKind):
 
 
 if __name__ == '__main__':
-    unittest.main(exit=False)
+    unittest.main(exit=True)
