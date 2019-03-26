@@ -216,49 +216,12 @@ class AstVisitor:
 
 			if definition.type == 'instance':
 				if definition.line is None and definition.column is None:
-					nameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
-					if nameHierarchy is not None:
-						referencedSymbolId = self.client.recordSymbol(nameHierarchy)
-						self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
-
-						referenceKind = srctrl.REFERENCE_USAGE
-						if getParentWithType(node, 'import_from') is not None:
-							# this would be the case for "from foo import f as my_f"
-							#                                             ^    ^
-							referenceKind = srctrl.REFERENCE_IMPORT
-
-						referenceId = self.client.recordReference(
-							self.contextStack[len(self.contextStack) - 1].id,
-							referencedSymbolId,
-							referenceKind
-						)
-						self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+					if self.recordInstanceReference(node, definition):
+						return
 
 			elif definition.type == 'module':
-				referencedNameHierarchy = self.getNameHierarchyFromModulePathOfDefinition(definition)
-				if referencedNameHierarchy is None:
-					referencedNameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
-				referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
-
-				# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
-				self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
-
-				if isQualifierNode(node):
-					self.client.recordQualifierLocation(referencedSymbolId, getSourceRangeOfNode(node))
-				else:
-					referenceKind = srctrl.REFERENCE_USAGE
-					if getParentWithType(node, 'import_name') is not None:
-						# this would be the case for "import foo"
-						#                                    ^
-						referenceKind = srctrl.REFERENCE_IMPORT
-
-					referenceId = self.client.recordReference(
-						self.contextStack[len(self.contextStack) - 1].id,
-						referencedSymbolId,
-						referenceKind
-					)
-
-					self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+				if self.recordModuleReference(node, definition):
+					return
 
 			elif definition.type in ['class', 'function']:
 				(startLine, startColumn) = node.start_pos
@@ -320,6 +283,56 @@ class AstVisitor:
 			contextNode = self.contextStack[len(self.contextStack) - 1].node
 			if node == contextNode:
 				self.contextStack.pop()
+
+
+	def recordInstanceReference(self, node, definition):
+		nameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
+		if nameHierarchy is not None:
+			referencedSymbolId = self.client.recordSymbol(nameHierarchy)
+			self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
+
+			referenceKind = srctrl.REFERENCE_USAGE
+			if getParentWithType(node, 'import_from') is not None:
+				# this would be the case for "from foo import f as my_f"
+				#                                             ^    ^
+				referenceKind = srctrl.REFERENCE_IMPORT
+
+			referenceId = self.client.recordReference(
+				self.contextStack[len(self.contextStack) - 1].id,
+				referencedSymbolId,
+				referenceKind
+			)
+			self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+			return True
+		return False
+
+
+	def recordModuleReference(self, node, definition):
+		referencedNameHierarchy = self.getNameHierarchyFromModulePathOfDefinition(definition)
+		if referencedNameHierarchy is None:
+			referencedNameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
+		referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
+
+		# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
+		self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
+
+		if isQualifierNode(node):
+			self.client.recordQualifierLocation(referencedSymbolId, getSourceRangeOfNode(node))
+		else:
+			referenceKind = srctrl.REFERENCE_USAGE
+			if getParentWithType(node, 'import_name') is not None:
+				# this would be the case for "import foo"
+				#                                    ^
+				referenceKind = srctrl.REFERENCE_IMPORT
+
+			referenceId = self.client.recordReference(
+				self.contextStack[len(self.contextStack) - 1].id,
+				referencedSymbolId,
+				referenceKind
+			)
+
+			self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+		return True
 
 
 	def recordClassReference(self, node, definition):
