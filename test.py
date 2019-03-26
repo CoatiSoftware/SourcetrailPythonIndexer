@@ -68,7 +68,7 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording Local Symbols
 
-	def test_indexer_records_usage_of_variable_with_multiple_definitions_as_multiple_local_symbols(self):
+	def test_indexer_records_usage_of_variable_with_multiple_definitions_as_single_local_symbols(self):
 		client = self.indexSourceCode(
 			'def foo(bar):\n'
 			'	if bar:\n'
@@ -79,8 +79,8 @@ class TestPythonIndexer(unittest.TestCase):
 			'foo(True)\n'
 			'foo(False)\n'
 		)
-		self.assertTrue('virtual_file.py<3:3> at [6:9|6:11]' in client.localSymbols)
-		self.assertTrue('virtual_file.py<5:3> at [6:9|6:11]' in client.localSymbols)
+		self.assertTrue('virtual_file.foo<baz> at [6:9|6:11]' in client.localSymbols)
+		self.assertTrue('virtual_file.foo<baz> at [6:9|6:11]' in client.localSymbols)
 
 
 	def test_indexer_records_function_parameter_as_local_symbol(self):
@@ -88,7 +88,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'def foo(bar):\n'
 			'	pass\n'
 		)
-		self.assertTrue('virtual_file.py<1:9> at [1:9|1:11]' in client.localSymbols)
+		self.assertTrue('virtual_file.foo<bar> at [1:9|1:11]' in client.localSymbols)
 
 
 	def test_indexer_records_usage_of_function_parameter_as_local_symbol(self):
@@ -96,7 +96,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'def foo(bar):\n'
 			'	x = bar\n'
 		)
-		self.assertTrue('virtual_file.py<1:9> at [2:6|2:8]' in client.localSymbols)
+		self.assertTrue('virtual_file.foo<bar> at [2:6|2:8]' in client.localSymbols)
 
 
 	def test_indexer_records_function_scope_variable_as_local_symbol(self):
@@ -104,7 +104,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'def foo():\n'
 			'	x = 5\n'
 		)
-		self.assertTrue('virtual_file.py<2:2> at [2:2|2:2]' in client.localSymbols)
+		self.assertTrue('virtual_file.foo<x> at [2:2|2:2]' in client.localSymbols)
 
 
 	def test_indexer_records_usage_of_function_scope_variable_as_local_symbol(self):
@@ -113,7 +113,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'	x = 5\n'
 			'	y = x\n'
 		)
-		self.assertTrue('virtual_file.py<2:2> at [3:6|3:6]' in client.localSymbols)
+		self.assertTrue('virtual_file.foo<x> at [3:6|3:6]' in client.localSymbols)
 
 
 	def test_indexer_records_method_scope_variable_as_local_symbol(self):
@@ -122,7 +122,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'	def bar(self):\n'
 			'		baz = 6\n'
 		)
-		self.assertTrue('virtual_file.py<3:3> at [3:3|3:5]' in client.localSymbols)
+		self.assertTrue('virtual_file.Foo.bar<baz> at [3:3|3:5]' in client.localSymbols)
 
 
 # Test Recording References

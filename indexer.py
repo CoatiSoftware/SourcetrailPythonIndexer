@@ -98,8 +98,9 @@ def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbos
 
 class ContextInfo:
 
-	def __init__(self, id, node):
+	def __init__(self, id, name, node):
 		self.id = id
+		self.name = name
 		self.node = node
 
 
@@ -133,12 +134,13 @@ class AstVisitor:
 			print('ERROR: ' + srctrl.getLastError())
 		self.client.recordFileLanguage(fileId, 'python')
 
-		moduleId = self.client.recordSymbol(self.getNameHierarchyFromModuleFilePath(self.sourceFilePath))
+		moduleNameHierarchy = self.getNameHierarchyFromModuleFilePath(self.sourceFilePath)
+		moduleId = self.client.recordSymbol(moduleNameHierarchy)
 		self.client.recordSymbolDefinitionKind(moduleId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(moduleId, srctrl.SYMBOL_MODULE)
 
-		self.contextStack.append(ContextInfo(fileId, None))
-		self.contextStack.append(ContextInfo(moduleId, None))
+		self.contextStack.append(ContextInfo(fileId, self.sourceFilePath, None))
+		self.contextStack.append(ContextInfo(moduleId, moduleNameHierarchy.getDisplayString(), None))
 
 
 	def traverseNode(self, node):
@@ -174,34 +176,36 @@ class AstVisitor:
 
 	def beginVisitClassdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode, self.sourceFilePath))
+		symbolNameHierarchy = self.getNameHierarchyOfNode(nameNode, self.sourceFilePath)
+		symbolId = self.client.recordSymbol(symbolNameHierarchy)
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
 		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
-		self.contextStack.append(ContextInfo(symbolId, node))
+		self.contextStack.append(ContextInfo(symbolId, symbolNameHierarchy.getDisplayString(), node))
 
 
 	def endVisitClassdef(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
 
 
 	def beginVisitFuncdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
-		symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(nameNode, self.sourceFilePath))
+		symbolNameHierarchy = self.getNameHierarchyOfNode(nameNode, self.sourceFilePath)
+		symbolId = self.client.recordSymbol(symbolNameHierarchy)
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
 		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
-		self.contextStack.append(ContextInfo(symbolId, node))
+		self.contextStack.append(ContextInfo(symbolId, symbolNameHierarchy.getDisplayString(), node))
 
 
 	def endVisitFuncdef(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
 
@@ -216,49 +220,12 @@ class AstVisitor:
 
 			if definition.type == 'instance':
 				if definition.line is None and definition.column is None:
-					nameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
-					if nameHierarchy is not None:
-						referencedSymbolId = self.client.recordSymbol(nameHierarchy)
-						self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
-
-						referenceKind = srctrl.REFERENCE_USAGE
-						if getParentWithType(node, 'import_from') is not None:
-							# this would be the case for "from foo import f as my_f"
-							#                                             ^    ^
-							referenceKind = srctrl.REFERENCE_IMPORT
-
-						referenceId = self.client.recordReference(
-							self.contextStack[len(self.contextStack) - 1].id,
-							referencedSymbolId,
-							referenceKind
-						)
-						self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+					if self.recordInstanceReference(node, definition):
+						return
 
 			elif definition.type == 'module':
-				referencedNameHierarchy = self.getNameHierarchyFromModulePathOfDefinition(definition)
-				if referencedNameHierarchy is None:
-					referencedNameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
-				referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
-
-				# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
-				self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
-
-				if isQualifierNode(node):
-					self.client.recordQualifierLocation(referencedSymbolId, getSourceRangeOfNode(node))
-				else:
-					referenceKind = srctrl.REFERENCE_USAGE
-					if getParentWithType(node, 'import_name') is not None:
-						# this would be the case for "import foo"
-						#                                    ^
-						referenceKind = srctrl.REFERENCE_IMPORT
-
-					referenceId = self.client.recordReference(
-						self.contextStack[len(self.contextStack) - 1].id,
-						referencedSymbolId,
-						referenceKind
-					)
-
-					self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+				if self.recordModuleReference(node, definition):
+					return
 
 			elif definition.type in ['class', 'function']:
 				(startLine, startColumn) = node.start_pos
@@ -293,7 +260,7 @@ class AstVisitor:
 
 	def endVisitName(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
 
@@ -306,7 +273,7 @@ class AstVisitor:
 
 	def endVisitString(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
 
@@ -317,9 +284,59 @@ class AstVisitor:
 
 	def endVisitErrorLeaf(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
+
+
+	def recordInstanceReference(self, node, definition):
+		nameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
+		if nameHierarchy is not None:
+			referencedSymbolId = self.client.recordSymbol(nameHierarchy)
+			self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
+
+			referenceKind = srctrl.REFERENCE_USAGE
+			if getParentWithType(node, 'import_from') is not None:
+				# this would be the case for "from foo import f as my_f"
+				#                                             ^    ^
+				referenceKind = srctrl.REFERENCE_IMPORT
+
+			referenceId = self.client.recordReference(
+				self.contextStack[-1].id,
+				referencedSymbolId,
+				referenceKind
+			)
+			self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+			return True
+		return False
+
+
+	def recordModuleReference(self, node, definition):
+		referencedNameHierarchy = self.getNameHierarchyFromModulePathOfDefinition(definition)
+		if referencedNameHierarchy is None:
+			referencedNameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
+		referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
+
+		# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
+		self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_MODULE)
+
+		if isQualifierNode(node):
+			self.client.recordQualifierLocation(referencedSymbolId, getSourceRangeOfNode(node))
+		else:
+			referenceKind = srctrl.REFERENCE_USAGE
+			if getParentWithType(node, 'import_name') is not None:
+				# this would be the case for "import foo"
+				#                                    ^
+				referenceKind = srctrl.REFERENCE_IMPORT
+
+			referenceId = self.client.recordReference(
+				self.contextStack[-1].id,
+				referencedSymbolId,
+				referenceKind
+			)
+
+			self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+		return True
 
 
 	def recordClassReference(self, node, definition):
@@ -351,7 +368,7 @@ class AstVisitor:
 					referenceKind = srctrl.REFERENCE_IMPORT
 
 			referenceId = self.client.recordReference(
-				self.contextStack[len(self.contextStack) - 1].id,
+				self.contextStack[-1].id,
 				referencedSymbolId,
 				referenceKind
 			)
@@ -373,7 +390,7 @@ class AstVisitor:
 		referenceKind = -1
 		nextNode = getNext(node)
 		if nextNode is not None and nextNode.type == 'trailer':
-			if len(nextNode.children) >= 2 and nextNode.children[0].value == '(' and nextNode.children[len(nextNode.children) - 1].value == ')':
+			if len(nextNode.children) >= 2 and nextNode.children[0].value == '(' and nextNode.children[-1].value == ')':
 				referenceKind = srctrl.REFERENCE_CALL
 		elif getParentWithType(node, 'import_from'):
 			referenceKind = srctrl.REFERENCE_IMPORT
@@ -382,7 +399,7 @@ class AstVisitor:
 			return False
 
 		referenceId = self.client.recordReference(
-			self.contextStack[len(self.contextStack) - 1].id,
+			self.contextStack[-1].id,
 			referencedSymbolId,
 			referenceKind
 		)
@@ -393,7 +410,7 @@ class AstVisitor:
 
 	def recordParamReference(self, node, definition):
 		definitionNameNode = definition._name.tree_name
-		localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, getSourceRangeOfNode(definitionNameNode)))
+		localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
 		self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
 		return True
 
@@ -466,19 +483,22 @@ class AstVisitor:
 				self.client.recordSymbolLocation(symbolId, sourceRange)
 
 			if referenceKind is not None:
-				contextInfo = self.contextStack[len(self.contextStack) - 1]
 				referenceId = self.client.recordReference(
-					contextInfo.id,
+					self.contextStack[-1].id,
 					symbolId,
 					referenceKind
 				)
 				self.client.recordReferenceLocation(referenceId, sourceRange)
 			return True
 		else:
-			localSymbolId = self.client.recordLocalSymbol(getLocalSymbolName(self.sourceFileName, getSourceRangeOfNode(definitionNameNode)))
+			localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
 			self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
 		# we don't return the 'True' here, because we may also want to record additional definitions of the local variable (see caller)
 		return False
+
+
+	def getLocalSymbolName(self, node):
+		return str(self.contextStack[-1].name) + '<' + node.value + '>'
 
 
 	def getNameHierarchyFromModuleFilePath(self, filePath):
@@ -889,10 +909,6 @@ def getSourceRangeOfNode(node):
 	startLine, startColumn = node.start_pos
 	endLine, endColumn = node.end_pos
 	return SourceRange(startLine, startColumn + 1, endLine, endColumn)
-
-
-def getLocalSymbolName(sourceFileName, sourceRange):
-	return sourceFileName + '<' + str(sourceRange.startLine) + ':' + str(sourceRange.startColumn) + '>'
 
 
 def getNamedParentNode(node):
