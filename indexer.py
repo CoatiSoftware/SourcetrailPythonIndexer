@@ -476,6 +476,9 @@ class AstVisitor:
 
 
 	def getNameHierarchyFromModuleFilePath(self, filePath):
+		if filePath is None:
+			return None
+
 		if filePath == _virtualFilePath:
 			return NameHierarchy(NameElement(os.path.splitext(_virtualFilePath)[0]), '.')
 
