@@ -187,7 +187,7 @@ class AstVisitor:
 
 	def endVisitClassdef(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
 
@@ -205,7 +205,7 @@ class AstVisitor:
 
 	def endVisitFuncdef(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
 
@@ -260,7 +260,7 @@ class AstVisitor:
 
 	def endVisitName(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
 
@@ -273,7 +273,7 @@ class AstVisitor:
 
 	def endVisitString(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
 
@@ -284,7 +284,7 @@ class AstVisitor:
 
 	def endVisitErrorLeaf(self, node):
 		if len(self.contextStack) > 0:
-			contextNode = self.contextStack[len(self.contextStack) - 1].node
+			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
 
@@ -302,7 +302,7 @@ class AstVisitor:
 				referenceKind = srctrl.REFERENCE_IMPORT
 
 			referenceId = self.client.recordReference(
-				self.contextStack[len(self.contextStack) - 1].id,
+				self.contextStack[-1].id,
 				referencedSymbolId,
 				referenceKind
 			)
@@ -330,7 +330,7 @@ class AstVisitor:
 				referenceKind = srctrl.REFERENCE_IMPORT
 
 			referenceId = self.client.recordReference(
-				self.contextStack[len(self.contextStack) - 1].id,
+				self.contextStack[-1].id,
 				referencedSymbolId,
 				referenceKind
 			)
@@ -368,7 +368,7 @@ class AstVisitor:
 					referenceKind = srctrl.REFERENCE_IMPORT
 
 			referenceId = self.client.recordReference(
-				self.contextStack[len(self.contextStack) - 1].id,
+				self.contextStack[-1].id,
 				referencedSymbolId,
 				referenceKind
 			)
@@ -390,7 +390,7 @@ class AstVisitor:
 		referenceKind = -1
 		nextNode = getNext(node)
 		if nextNode is not None and nextNode.type == 'trailer':
-			if len(nextNode.children) >= 2 and nextNode.children[0].value == '(' and nextNode.children[len(nextNode.children) - 1].value == ')':
+			if len(nextNode.children) >= 2 and nextNode.children[0].value == '(' and nextNode.children[-1].value == ')':
 				referenceKind = srctrl.REFERENCE_CALL
 		elif getParentWithType(node, 'import_from'):
 			referenceKind = srctrl.REFERENCE_IMPORT
@@ -399,7 +399,7 @@ class AstVisitor:
 			return False
 
 		referenceId = self.client.recordReference(
-			self.contextStack[len(self.contextStack) - 1].id,
+			self.contextStack[-1].id,
 			referencedSymbolId,
 			referenceKind
 		)
@@ -484,7 +484,7 @@ class AstVisitor:
 
 			if referenceKind is not None:
 				referenceId = self.client.recordReference(
-					self.contextStack[len(self.contextStack) - 1].id,
+					self.contextStack[-1].id,
 					symbolId,
 					referenceKind
 				)
