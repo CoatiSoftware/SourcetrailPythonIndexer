@@ -500,7 +500,7 @@ class AstVisitor:
 		if symbolKind is not None or referenceKind is not None:
 			symbolNameHierarchy = self.getNameHierarchyOfNode(definitionNameNode, definitionModulePath)
 			if symbolNameHierarchy is None:
-				symbolNameHierarchy = getNameHierarchyForUnsolvedSymbol()
+				return False
 
 			symbolId = self.client.recordSymbol(symbolNameHierarchy)
 
