@@ -118,7 +118,13 @@ class AstVisitor:
 		self.sourceFileName = os.path.split(self.sourceFilePath)[-1]
 		self.sourceFileContent = sourceFileContent
 
-		self.sysPath = [os.path.dirname(self.sourceFilePath)]
+		packageRootPath = os.path.dirname(self.sourceFilePath)
+		p = packageRootPath
+		while os.path.exists(os.path.join(p, '__init__.py')):
+			packageRootPath = p
+			p = os.path.dirname(p)
+		self.sysPath = [packageRootPath]
+
 		if sysPath is not None:
 			self.sysPath.extend(sysPath)
 		else:
@@ -231,7 +237,7 @@ class AstVisitor:
 				(startLine, startColumn) = node.start_pos
 				if definition.line == startLine and definition.column == startColumn:
 					# Early exit. We don't record references for locations of classes or functions that are definitions
-					continue
+					return
 
 				if definition.type == 'class':
 					if self.recordClassReference(node, definition):
@@ -243,7 +249,7 @@ class AstVisitor:
 
 			elif definition.type == 'param':
 				if definition.line is None or definition.column is None:
-					# Early exit. For now we don't record references for names that don't have a valid definition location
+					# Early skip and try next definition. For now we don't record references for names that don't have a valid definition location
 					continue
 
 				if self.recordParamReference(node, definition):
@@ -251,11 +257,19 @@ class AstVisitor:
 
 			elif definition.type == 'statement':
 				if definition.line is None or definition.column is None:
-					# Early exit. For now we don't record references for names that don't have a valid definition location
+					# Early skip and try next definition. For now we don't record references for names that don't have a valid definition location
 					continue
 
 				if self.recordStatementReference(node, definition):
 					return
+
+		referencedSymbolId = self.client.recordSymbol(self.getNameHierarchyForUnsolvedSymbol())
+		referenceId = self.client.recordReference(
+			self.contextStack[-1].id,
+			referencedSymbolId,
+			srctrl.REFERENCE_USAGE
+		)
+		self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
 
 
 	def endVisitName(self, node):
@@ -489,12 +503,10 @@ class AstVisitor:
 					referenceKind
 				)
 				self.client.recordReferenceLocation(referenceId, sourceRange)
-			return True
 		else:
 			localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
 			self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
-		# we don't return the 'True' here, because we may also want to record additional definitions of the local variable (see caller)
-		return False
+		return True
 
 
 	def getLocalSymbolName(self, node):
@@ -537,7 +549,8 @@ class AstVisitor:
 						else:
 							nameHierarchy.nameElements.append(NameElement(namePart))
 					return nameHierarchy
-		return None # TODO: return 'unsolved-symbol' here
+
+		return self.getNameHierarchyForUnsolvedSymbol()
 
 
 	def getNameHierarchyFromModulePathOfDefinition(self, definition):
@@ -583,6 +596,10 @@ class AstVisitor:
 					return None
 
 			return self.getNameHierarchyOfNode(definition._name.tree_name, definitionModulePath)
+
+
+	def getNameHierarchyForUnsolvedSymbol(self):
+		return NameHierarchy(NameElement('unsolved symbol'), '.')
 
 
 	def getDefinitionsOfNode(self, node, nodeSourceFilePath):
