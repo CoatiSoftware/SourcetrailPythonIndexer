@@ -139,14 +139,14 @@ class AstVisitor:
 		if fileId == 0:
 			print('ERROR: ' + srctrl.getLastError())
 		self.client.recordFileLanguage(fileId, 'python')
+		self.contextStack.append(ContextInfo(fileId, self.sourceFilePath, None))
 
 		moduleNameHierarchy = self.getNameHierarchyFromModuleFilePath(self.sourceFilePath)
-		moduleId = self.client.recordSymbol(moduleNameHierarchy)
-		self.client.recordSymbolDefinitionKind(moduleId, srctrl.DEFINITION_EXPLICIT)
-		self.client.recordSymbolKind(moduleId, srctrl.SYMBOL_MODULE)
-
-		self.contextStack.append(ContextInfo(fileId, self.sourceFilePath, None))
-		self.contextStack.append(ContextInfo(moduleId, moduleNameHierarchy.getDisplayString(), None))
+		if moduleNameHierarchy is not None:
+			moduleId = self.client.recordSymbol(moduleNameHierarchy)
+			self.client.recordSymbolDefinitionKind(moduleId, srctrl.DEFINITION_EXPLICIT)
+			self.client.recordSymbolKind(moduleId, srctrl.SYMBOL_MODULE)
+			self.contextStack.append(ContextInfo(moduleId, moduleNameHierarchy.getDisplayString(), None))
 
 
 	def traverseNode(self, node):
@@ -182,7 +182,11 @@ class AstVisitor:
 
 	def beginVisitClassdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
+
 		symbolNameHierarchy = self.getNameHierarchyOfNode(nameNode, self.sourceFilePath)
+		if symbolNameHierarchy is None:
+			symbolNameHierarchy = getNameHierarchyForUnsolvedSymbol()
+
 		symbolId = self.client.recordSymbol(symbolNameHierarchy)
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
@@ -200,7 +204,11 @@ class AstVisitor:
 
 	def beginVisitFuncdef(self, node):
 		nameNode = getFirstDirectChildWithType(node, 'name')
+
 		symbolNameHierarchy = self.getNameHierarchyOfNode(nameNode, self.sourceFilePath)
+		if symbolNameHierarchy is None:
+			symbolNameHierarchy = getNameHierarchyForUnsolvedSymbol()
+
 		symbolId = self.client.recordSymbol(symbolNameHierarchy)
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
@@ -263,7 +271,7 @@ class AstVisitor:
 				if self.recordStatementReference(node, definition):
 					return
 
-		referencedSymbolId = self.client.recordSymbol(self.getNameHierarchyForUnsolvedSymbol())
+		referencedSymbolId = self.client.recordSymbol(getNameHierarchyForUnsolvedSymbol())
 		referenceId = self.client.recordReference(
 			self.contextStack[-1].id,
 			referencedSymbolId,
@@ -329,6 +337,9 @@ class AstVisitor:
 		referencedNameHierarchy = self.getNameHierarchyFromModulePathOfDefinition(definition)
 		if referencedNameHierarchy is None:
 			referencedNameHierarchy = self.getNameHierarchyFromFullNameOfDefinition(definition)
+		if referencedNameHierarchy is None:
+			return False
+
 		referencedSymbolId = self.client.recordSymbol(referencedNameHierarchy)
 
 		# Record symbol kind. If the used type is within indexed code, we already have this info. In any other case, this is valuable info!
@@ -487,7 +498,11 @@ class AstVisitor:
 		sourceRange = getSourceRangeOfNode(node)
 
 		if symbolKind is not None or referenceKind is not None:
-			symbolId = self.client.recordSymbol(self.getNameHierarchyOfNode(definitionNameNode, definitionModulePath))
+			symbolNameHierarchy = self.getNameHierarchyOfNode(definitionNameNode, definitionModulePath)
+			if symbolNameHierarchy is None:
+				symbolNameHierarchy = getNameHierarchyForUnsolvedSymbol()
+
+			symbolId = self.client.recordSymbol(symbolNameHierarchy)
 
 			if symbolKind is not None:
 				self.client.recordSymbolKind(symbolId, symbolKind)
@@ -550,7 +565,7 @@ class AstVisitor:
 							nameHierarchy.nameElements.append(NameElement(namePart))
 					return nameHierarchy
 
-		return self.getNameHierarchyForUnsolvedSymbol()
+		return None
 
 
 	def getNameHierarchyFromModulePathOfDefinition(self, definition):
@@ -598,10 +613,6 @@ class AstVisitor:
 			return self.getNameHierarchyOfNode(definition._name.tree_name, definitionModulePath)
 
 
-	def getNameHierarchyForUnsolvedSymbol(self):
-		return NameHierarchy(NameElement('unsolved symbol'), '.')
-
-
 	def getDefinitionsOfNode(self, node, nodeSourceFilePath):
 		(startLine, startColumn) = node.start_pos
 		if nodeSourceFilePath == _virtualFilePath: # we are indexing a provided code snippet
@@ -626,7 +637,7 @@ class AstVisitor:
 
 	def getNameHierarchyOfNode(self, node, nodeSourceFilePath):
 		if node is None:
-			return self.getNameHierarchyForUnsolvedSymbol()
+			return None
 
 		if node.type == 'name':
 			nameNode = node
@@ -634,10 +645,13 @@ class AstVisitor:
 			nameNode = getFirstDirectChildWithType(node, 'name')
 
 		if nameNode is None:
-			return self.getNameHierarchyForUnsolvedSymbol()
+			return None
 
 		# we derive the name for the canonical node (e.g. the node's definition)
 		for definition in self.getDefinitionsOfNode(nameNode, nodeSourceFilePath):
+			if definition is None:
+				continue
+
 			definitionModulePath = definition.module_path
 			if definitionModulePath is None:
 				if self.sourceFilePath == _virtualFilePath:
@@ -646,6 +660,8 @@ class AstVisitor:
 					continue
 
 			definitionNameNode = definition._name.tree_name
+			if definitionNameNode is None:
+				continue
 
 			parentNode = getNamedParentNode(definitionNameNode)
 
@@ -677,15 +693,18 @@ class AstVisitor:
 
 			if parentNode is not None:
 				parentNodeNameHierarchy = self.getNameHierarchyOfNode(parentNode, definitionModulePath)
-				if parentNodeNameHierarchy is not None:
-					parentNodeNameHierarchy.nameElements.append(nameElement)
-					return parentNodeNameHierarchy
+				if parentNodeNameHierarchy is None:
+					parentNodeNameHierarchy = getNameHierarchyForUnsolvedSymbol()
+				parentNodeNameHierarchy.nameElements.append(nameElement)
+				return parentNodeNameHierarchy
 
 			nameHierarchy = self.getNameHierarchyFromModuleFilePath(nodeSourceFilePath)
+			if nameHierarchy is None:
+				nameHierarchy = getNameHierarchyForUnsolvedSymbol()
 			nameHierarchy.nameElements.append(nameElement)
 			return nameHierarchy
 
-		return self.getNameHierarchyForUnsolvedSymbol()
+		return None
 
 
 class VerboseAstVisitor(AstVisitor):
@@ -867,6 +886,8 @@ class SourceRange:
 
 class NameHierarchy():
 
+	unsolvedSymbolName = 'unsolved symbol' # this name should not collide with normal symbol name, because they cannot contain space characters
+
 	def __init__(self, nameElement, delimiter):
 		self.nameElements = []
 		if nameElement is not None:
@@ -911,6 +932,10 @@ class NameHierarchyEncoder(json.JSONEncoder):
 			}
 		# Let the base class default method raise the TypeError
 		return json.JSONEncoder.default(self, obj)
+
+
+def getNameHierarchyForUnsolvedSymbol():
+	return NameHierarchy(NameElement(NameHierarchy.unsolvedSymbolName), '.')
 
 
 def isQualifierNode(node):
