@@ -626,7 +626,7 @@ class AstVisitor:
 
 	def getNameHierarchyOfNode(self, node, nodeSourceFilePath):
 		if node is None:
-			return None
+			return self.getNameHierarchyForUnsolvedSymbol()
 
 		if node.type == 'name':
 			nameNode = node
@@ -634,7 +634,7 @@ class AstVisitor:
 			nameNode = getFirstDirectChildWithType(node, 'name')
 
 		if nameNode is None:
-			return None
+			return self.getNameHierarchyForUnsolvedSymbol()
 
 		# we derive the name for the canonical node (e.g. the node's definition)
 		for definition in self.getDefinitionsOfNode(nameNode, nodeSourceFilePath):
@@ -685,7 +685,7 @@ class AstVisitor:
 			nameHierarchy.nameElements.append(nameElement)
 			return nameHierarchy
 
-		return None
+		return self.getNameHierarchyForUnsolvedSymbol()
 
 
 class VerboseAstVisitor(AstVisitor):
