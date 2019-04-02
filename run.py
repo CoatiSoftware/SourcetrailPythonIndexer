@@ -17,6 +17,7 @@ def main():
 	)
 	parser.add_argument('--clear', help='clear the database before indexing', action='store_true', required=False)
 	parser.add_argument('--verbose', help='enable verbose console output', action='store_true', required=False)
+	parser.add_argument('--version', action='version', version='SourcetrailPythonIndexer {version}'.format(version=indexer.__version__))
 
 	args = parser.parse_args()
 

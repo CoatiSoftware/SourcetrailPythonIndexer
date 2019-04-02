@@ -6,9 +6,12 @@ import sys
 import sourcetraildb as srctrl
 from jedi._compatibility import all_suffixes
 
+
+__version__ = 'v0.db23.p2'
+
+
 _virtualFilePath = 'virtual_file.py'
 
-import sys
 
 def getEnvironment(environmentDirectoryPath = None):
 	if environmentDirectoryPath is not None:
