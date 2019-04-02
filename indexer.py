@@ -5,9 +5,7 @@ import sys
 
 import sourcetraildb as srctrl
 from jedi._compatibility import all_suffixes
-
-
-__version__ = 'v0.db23.p2'
+from _version import __version__
 
 
 _virtualFilePath = 'virtual_file.py'
