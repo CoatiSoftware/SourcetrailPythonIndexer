@@ -10,7 +10,17 @@ _virtualFilePath = 'virtual_file.py'
 
 import sys
 
-def getEnvironment():
+def getEnvironment(environmentDirectoryPath = None):
+	if environmentDirectoryPath is not None:
+		try:
+			environment = jedi.create_environment(environmentDirectoryPath)
+			environment._get_subprocess() # check if this environment is really functional
+			return environment
+		except Exception:
+			print('WARNING: The provided environment path "' + environmentDirectoryPath + '" does not specify a functional Python '
+				'environment. Using fallback environment instead.')
+			pass
+
 	try:
 		environment = jedi.get_default_environment()
 		environment._get_subprocess() # check if this environment is really functional
@@ -32,7 +42,7 @@ def getEnvironment():
 				except jedi.InvalidPythonEnvironment:
 					pass
 
-	raise jedi.InvalidPythonEnvironment("Cannot find executable python.")
+	raise jedi.InvalidPythonEnvironment("Unable to find an executable Python environment.")
 
 
 def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, sysPath = None):
@@ -63,19 +73,19 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, s
 	astVisitor.traverseNode(module_node)
 
 
-def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbose):
+def indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, astVisitorClient, isVerbose):
 
 	if isVerbose:
-		print('Indexing source file \"' + sourceFilePath + '\".')
+		print('Indexing source file "' + sourceFilePath + '".')
 
 	sourceCode = ''
 	with open(sourceFilePath, 'r') as input:
 		sourceCode=input.read()
 
-	environment = getEnvironment()
+	environment = getEnvironment(environmentDirectoryPath)
 
 	if isVerbose:
-		print('Using Python environment at \"' + environment.path + '\" for indexing.')
+		print('Using Python environment at "' + environment.path + '" for indexing.')
 
 	project = jedi.api.project.Project(workingDirectory, environment = environment)
 
@@ -305,7 +315,7 @@ class AstVisitor:
 
 
 	def beginVisitErrorLeaf(self, node):
-		self.client.recordError('Unexpected token of type \"' + node.token_type + '\" encountered.', False, getSourceRangeOfNode(node))
+		self.client.recordError('Unexpected token of type "' + node.token_type + '" encountered.', False, getSourceRangeOfNode(node))
 
 
 	def endVisitErrorLeaf(self, node):
