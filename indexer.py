@@ -5,10 +5,11 @@ import sys
 
 import sourcetraildb as srctrl
 from jedi._compatibility import all_suffixes
+from _version import __version__
+
 
 _virtualFilePath = 'virtual_file.py'
 
-import sys
 
 def getEnvironment(environmentDirectoryPath = None):
 	if environmentDirectoryPath is not None:
