@@ -12,9 +12,16 @@ def main():
 	parser.add_argument('--verbose', help='enable verbose console output', action='store_true', required=False)
 
 	args = parser.parse_args()
+
+	workingDirectory = os.getcwd()
+
 	databaseFilePath = args.database_file_path
+	if not os.path.isabs(databaseFilePath):
+		databaseFilePath = os.path.join(workingDirectory, databaseFilePath)
+
 	sourceFilePath = args.source_file_path
-	# TODO: make paths absolute if they are provided as relative paths
+	if not os.path.isabs(sourceFilePath):
+		sourceFilePath = os.path.join(workingDirectory, sourceFilePath)
 
 	if not srctrl.open(databaseFilePath):
 		print('ERROR: ' + srctrl.getLastError())
@@ -35,15 +42,14 @@ def main():
 			print('Loaded database contains data.')
 
 	srctrl.beginTransaction()
-	indexSourceFile(sourceFilePath, args.verbose)
+	indexSourceFile(sourceFilePath, workingDirectory, args.verbose)
 	srctrl.commitTransaction()
 
 	if not srctrl.close():
 		print('ERROR: ' + srctrl.getLastError())
 
 
-def indexSourceFile(sourceFilePath, verbose):
-	workingDirectory = os.getcwd()
+def indexSourceFile(sourceFilePath, workingDirectory, verbose):
 	astVisitorClient = indexer.AstVisitorClient()
 	indexer.indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, verbose)
 

@@ -64,6 +64,10 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, s
 
 
 def indexSourceFile(sourceFilePath, workingDirectory, astVisitorClient, isVerbose):
+
+	if isVerbose:
+		print('Indexing source file \"' + sourceFilePath + '\".')
+
 	sourceCode = ''
 	with open(sourceFilePath, 'r') as input:
 		sourceCode=input.read()
