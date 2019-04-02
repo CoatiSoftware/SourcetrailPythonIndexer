@@ -76,7 +76,7 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, s
 def indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, astVisitorClient, isVerbose):
 
 	if isVerbose:
-		print('Indexing source file "' + sourceFilePath + '".')
+		print('INFO: Indexing source file "' + sourceFilePath + '".')
 
 	sourceCode = ''
 	with open(sourceFilePath, 'r') as input:
@@ -85,7 +85,7 @@ def indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, 
 	environment = getEnvironment(environmentDirectoryPath)
 
 	if isVerbose:
-		print('Using Python environment at "' + environment.path + '" for indexing.')
+		print('INFO: Using Python environment at "' + environment.path + '" for indexing.')
 
 	project = jedi.api.project.Project(workingDirectory, environment = environment)
 
@@ -753,11 +753,11 @@ class AstVisitorClient:
 	def __init__(self):
 		self.indexedFileId = 0
 		if srctrl.isCompatible():
-			print('Loaded database is compatible.')
+			print('INFO: Loaded database is compatible.')
 		else:
-			print('Loaded database is not compatible.')
-			print('Supported DB Version: ' + str(srctrl.getSupportedDatabaseVersion()))
-			print('Loaded DB Version: ' + str(srctrl.getLoadedDatabaseVersion()))
+			print('WARNING: Loaded database is not compatible.')
+			print('INFO: Supported DB Version: ' + str(srctrl.getSupportedDatabaseVersion()))
+			print('INFO: Loaded DB Version: ' + str(srctrl.getLoadedDatabaseVersion()))
 
 
 	def recordSymbol(self, nameHierarchy):

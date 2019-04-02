@@ -39,18 +39,18 @@ def main():
 
 	if args.clear:
 		if args.verbose:
-			print('Clearing database...')
+			print('INFO: Clearing database...')
 		if not srctrl.clear():
 			print('ERROR: ' + srctrl.getLastError())
 		else:
 			if args.verbose:
-				print('Clearing done.')
+				print('INFO: Clearing done.')
 
 	if args.verbose:
 		if srctrl.isEmpty():
-			print('Loaded database is empty.')
+			print('INFO: Loaded database is empty.')
 		else:
-			print('Loaded database contains data.')
+			print('INFO: Loaded database contains data.')
 
 	srctrl.beginTransaction()
 	indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, args.verbose)
