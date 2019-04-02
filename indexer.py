@@ -6,6 +6,7 @@ import sys
 import sourcetraildb as srctrl
 from jedi._compatibility import all_suffixes
 from _version import __version__
+from _version import _sourcetrail_db_version
 
 
 _virtualFilePath = 'virtual_file.py'
@@ -44,6 +45,23 @@ def getEnvironment(environmentDirectoryPath = None):
 					pass
 
 	raise jedi.InvalidPythonEnvironment("Unable to find an executable Python environment.")
+
+
+def isSourcetrailDBVersionCompatible(allowLogging = False):
+	requiredVersion = _sourcetrail_db_version
+
+	try:
+		usedVersion = srctrl.getVersionString()
+	except AttributeError:
+		if allowLogging:
+			print('ERROR: Used version of SourcetrailDB is incompatible to what is required by this version of SourcetrailPythonIndexer (' + requiredVersion + ').')
+		return False
+
+	if usedVersion != requiredVersion:
+		if allowLogging:
+			print('ERROR: Used version of SourcetrailDB (' + usedVersion + ') is incompatible to what is required by this version of SourcetrailPythonIndexer (' + requiredVersion + ').')
+		return False
+	return True
 
 
 def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, sysPath = None):

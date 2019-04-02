@@ -444,6 +444,10 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('FIELD: virtual_file.Foo.baz at [3:8|3:10]' in client.symbols)
 
 
+	def test_issue_8(self):
+		self.assertTrue(indexer.isSourcetrailDBVersionCompatible())
+
+
 # Utility Functions
 
 	def indexSourceCode(self, sourceCode, sysPath = None, verbose = False):
