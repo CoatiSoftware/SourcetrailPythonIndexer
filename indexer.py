@@ -647,25 +647,29 @@ class AstVisitor:
 
 
 	def getDefinitionsOfNode(self, node, nodeSourceFilePath):
-		(startLine, startColumn) = node.start_pos
-		if nodeSourceFilePath == _virtualFilePath: # we are indexing a provided code snippet
-			script = jedi.Script(
-				source = self.sourceFileContent,
-				line = startLine,
-				column = startColumn,
-				environment = self.environment,
-				sys_path = self.sysPath
-			)
-		else: # we are indexing a real file
-			script = jedi.Script(
-				source = None,
-				line = startLine,
-				column = startColumn,
-				path = nodeSourceFilePath,
-				environment = self.environment,
-				sys_path = self.sysPath
-			)
-		return script.goto_assignments(follow_imports=True)
+		try:
+			(startLine, startColumn) = node.start_pos
+			if nodeSourceFilePath == _virtualFilePath: # we are indexing a provided code snippet
+				script = jedi.Script(
+					source = self.sourceFileContent,
+					line = startLine,
+					column = startColumn,
+					environment = self.environment,
+					sys_path = self.sysPath
+				)
+			else: # we are indexing a real file
+				script = jedi.Script(
+					source = None,
+					line = startLine,
+					column = startColumn,
+					path = nodeSourceFilePath,
+					environment = self.environment,
+					sys_path = self.sysPath
+				)
+			return script.goto_assignments(follow_imports=True)
+
+		except Exception:
+			return []
 
 
 	def getNameHierarchyOfNode(self, node, nodeSourceFilePath):
