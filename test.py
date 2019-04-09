@@ -450,7 +450,7 @@ class TestPythonIndexer(unittest.TestCase):
 		client = self.indexSourceCode(
 			'import this_is_not_a_real_package\n'
 		)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
 
 
 	def test_indexer_records_error_if_package_of_imported_module_has_not_been_found(self):
@@ -458,7 +458,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'import this_is_not_a_real_package.this_is_not_a_real_module\n'
 		)
 		self.assertEqual(len(client.errors), 1)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
 
 
 	def test_indexer_records_error_if_imported_module_has_not_been_found(self):
@@ -466,7 +466,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'import pkg.this_is_not_a_real_module\n',
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:12|1:36]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_module" has not been found." at [1:12|1:36]' in client.errors)
 
 
 	def test_indexer_records_error_for_each_unsolved_import_in_single_import_statement(self):
@@ -475,9 +475,9 @@ class TestPythonIndexer(unittest.TestCase):
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertEqual(len(client.errors), 3)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:36|1:61]' in client.errors)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:94|1:118]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:36|1:61]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_module" has not been found." at [1:94|1:118]' in client.errors)
 
 
 	def test_indexer_records_error_if_imported_aliased_package_has_not_been_found(self):
@@ -485,7 +485,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'import this_is_not_a_real_package as p\n'
 		)
 		self.assertEqual(len(client.errors), 1)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
 
 
 	def test_indexer_records_error_if_package_of_imported_aliased_module_has_not_been_found(self):
@@ -493,7 +493,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'import this_is_not_a_real_package.this_is_not_a_real_module as mod\n'
 		)
 		self.assertEqual(len(client.errors), 1)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
 
 
 	def test_indexer_records_error_if_imported_aliased_module_has_not_been_found(self):
@@ -502,7 +502,7 @@ class TestPythonIndexer(unittest.TestCase):
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertEqual(len(client.errors), 1)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:12|1:36]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_module" has not been found." at [1:12|1:36]' in client.errors)
 
 
 	def test_indexer_records_error_for_each_unsolved_aliased_import_in_single_import_statement(self):
@@ -511,9 +511,44 @@ class TestPythonIndexer(unittest.TestCase):
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertEqual(len(client.errors), 3)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:41|1:66]' in client.errors)
-		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:107|1:131]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:41|1:66]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_module" has not been found." at [1:107|1:131]' in client.errors)
+
+
+	def test_indexer_records_error_if_package_of_imported_aliased_symbol_has_not_been_found(self):
+		client = self.indexSourceCode(
+			'from this_is_not_a_real_package import this_is_not_a_real_symbol as sym\n'
+		)
+		self.assertEqual(len(client.errors), 1)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:6|1:31]' in client.errors)
+
+
+	def test_indexer_records_error_if_package_of_module_of_imported_aliased_symbol_has_not_been_found(self):
+		client = self.indexSourceCode(
+			'from this_is_not_a_real_package.this_is_not_a_real_module import this_is_not_a_real_symbol as sym\n'
+		)
+		self.assertEqual(len(client.errors), 1)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_package" has not been found." at [1:6|1:31]' in client.errors)
+
+
+	def test_indexer_records_error_if_module_of_imported_aliased_symbol_has_not_been_found(self):
+		client = self.indexSourceCode(
+			'from pkg.this_is_not_a_real_module import this_is_not_a_real_symbol as sym\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertEqual(len(client.errors), 1)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_module" has not been found." at [1:10|1:34]' in client.errors)
+
+
+	def test_indexer_records_error_if_imported_aliased_symbol_has_not_been_found(self):
+		client = self.indexSourceCode(
+			'from pkg import this_is_not_a_real_symbol_1 as sym1, this_is_not_a_real_symbol_2 as sym2\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertEqual(len(client.errors), 2)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_symbol_1" has not been found." at [1:17|1:43]' in client.errors)
+		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_symbol_2" has not been found." at [1:54|1:80]' in client.errors)
 
 
 # Test GitHub Issues
