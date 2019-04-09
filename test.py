@@ -457,6 +457,7 @@ class TestPythonIndexer(unittest.TestCase):
 		client = self.indexSourceCode(
 			'import this_is_not_a_real_package.this_is_not_a_real_module\n'
 		)
+		self.assertEqual(len(client.errors), 1)
 		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
 
 
@@ -466,6 +467,17 @@ class TestPythonIndexer(unittest.TestCase):
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:12|1:36]' in client.errors)
+
+
+	def test_indexer_records_error_for_each_unsolved_import_in_single_import_statement(self):
+		client = self.indexSourceCode(
+			'import this_is_not_a_real_package, this_is_not_a_real_package.this_is_not_a_real_module, pkg.this_is_not_a_real_module\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertEqual(len(client.errors), 3)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:36|1:61]' in client.errors)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:94|1:118]' in client.errors)
 
 
 # Test GitHub Issues
