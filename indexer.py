@@ -152,10 +152,8 @@ class AstVisitor:
 		self.sourceFileContent = sourceFileContent
 
 		packageRootPath = os.path.dirname(self.sourceFilePath)
-		p = packageRootPath
-		while os.path.exists(os.path.join(p, '__init__.py')):
-			packageRootPath = p
-			p = os.path.dirname(p)
+		while os.path.exists(os.path.join(packageRootPath, '__init__.py')):
+			packageRootPath =  os.path.dirname(packageRootPath)
 		self.sysPath = [packageRootPath]
 
 		if sysPath is not None:
@@ -468,7 +466,7 @@ class AstVisitor:
 
 	def recordParamReference(self, node, definition):
 		definitionNameNode = definition._name.tree_name
-		localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
+		localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(definitionNameNode))
 		self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
 		return True
 
