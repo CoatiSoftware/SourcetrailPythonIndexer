@@ -261,6 +261,10 @@ class AstVisitor:
 
 	def beginVisitImportName(self, node):
 		importedNameNode = getFirstDirectChildWithType(node, 'name')
+		if importedNameNode is None:
+			dottedNameNode = getFirstDirectChildWithType(node, 'dotted_name')
+			if dottedNameNode is not None:
+				importedNameNode = getFirstDirectChildWithType(dottedNameNode, 'name')
 		if importedNameNode is not None:
 			if len(self.getDefinitionsOfNode(importedNameNode, self.sourceFilePath)) == 0:
 				self.client.recordError('Module named "' + importedNameNode.value + '" has not been found.', False, getSourceRangeOfNode(importedNameNode))
