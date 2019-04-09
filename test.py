@@ -480,6 +480,42 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:94|1:118]' in client.errors)
 
 
+	def test_indexer_records_error_if_imported_aliased_package_has_not_been_found(self):
+		client = self.indexSourceCode(
+			'import this_is_not_a_real_package as p\n'
+		)
+		self.assertEqual(len(client.errors), 1)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+
+
+	def test_indexer_records_error_if_package_of_imported_aliased_module_has_not_been_found(self):
+		client = self.indexSourceCode(
+			'import this_is_not_a_real_package.this_is_not_a_real_module as mod\n'
+		)
+		self.assertEqual(len(client.errors), 1)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+
+
+	def test_indexer_records_error_if_imported_aliased_module_has_not_been_found(self):
+		client = self.indexSourceCode(
+			'import pkg.this_is_not_a_real_module as mod\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertEqual(len(client.errors), 1)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:12|1:36]' in client.errors)
+
+
+	def test_indexer_records_error_for_each_unsolved_aliased_import_in_single_import_statement(self):
+		client = self.indexSourceCode(
+			'import this_is_not_a_real_package as p, this_is_not_a_real_package.this_is_not_a_real_module as mod1, pkg.this_is_not_a_real_module as mod2\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertEqual(len(client.errors), 3)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:41|1:66]' in client.errors)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:107|1:131]' in client.errors)
+
+
 # Test GitHub Issues
 
 	def test_issue_6(self):

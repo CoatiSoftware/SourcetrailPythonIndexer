@@ -264,7 +264,12 @@ class AstVisitor:
 			if node.type == 'import_name':
 				for c in node.children:
 					check(c)
-			if node.type == 'dotted_as_names':
+			elif node.type == 'dotted_as_name':
+				for c in node.children:
+					if c.type == 'keyword': # we just the children (usually only one) until we hit the "as" keyword
+						break
+					check(c)
+			elif node.type == 'dotted_as_names':
 				for c in node.children:
 					check(c)
 			elif node.type == 'dotted_name':
