@@ -624,8 +624,8 @@ class AstVisitor:
 			return None
 
 		if definition.line is None and definition.column is None:
-			if definition.module_name == 'builtins':
-				nameHierarchy = NameHierarchy(NameElement(definition.module_name), '.')
+			if definition.module_name in ['builtins', '__builtin__']:
+				nameHierarchy = NameHierarchy(NameElement('builtin'), '.')
 				for namePart in definition.full_name.split('.'):
 					nameHierarchy.nameElements.append(NameElement(namePart))
 				return nameHierarchy

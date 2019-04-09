@@ -300,18 +300,31 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('TYPE_USAGE: virtual_file -> sys.__loader__ at [2:5|2:14]' in client.references)
 
 
+	def test_indexer_records_usage_of_super_keyword(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def foo():\n'
+			'		pass\n'
+			'\n'
+			'class Bar(Foo):\n'
+			'	def bar(self):\n'
+			'		super().foo()\n'
+		)
+		self.assertTrue('TYPE_USAGE: virtual_file.Bar.bar -> builtin.super at [7:3|7:7]' in client.references)
+
+
 	def test_indexer_records_usage_of_builtin_class(self):
 		client = self.indexSourceCode(
 			'foo = str(b"bar")\n'
 		)
-		self.assertTrue('TYPE_USAGE: virtual_file -> builtins.str at [1:7|1:9]' in client.references)
+		self.assertTrue('TYPE_USAGE: virtual_file -> builtin.str at [1:7|1:9]' in client.references)
 
 
 	def test_indexer_records_call_to_builtin_function(self):
 		client = self.indexSourceCode(
 			'foo = "test string".islower()\n'
 		)
-		self.assertTrue('CALL: virtual_file -> builtins.str.islower at [1:21|1:27]' in client.references)
+		self.assertTrue('CALL: virtual_file -> builtin.str.islower at [1:21|1:27]' in client.references)
 
 
 	def test_indexer_records_call_to_environment_function(self):
