@@ -438,12 +438,19 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording Errors
 
-	def test_indexer_records_error(self):
+	def test_indexer_records_syntax_error(self):
 		client = self.indexSourceCode(
 			'def foo()\n' # missing ':' character
 			'	pass\n'
 		)
 		self.assertTrue('ERROR: "Unexpected token of type "INDENT" encountered." at [2:2|2:1]' in client.errors)
+
+
+	def test_indexer_records_error_if_imported_package_has_not_been_found(self):
+		client = self.indexSourceCode(
+			'import this_is_not_a_real_package\n'
+		)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
 
 
 # Test GitHub Issues

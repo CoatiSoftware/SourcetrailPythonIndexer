@@ -188,6 +188,8 @@ class AstVisitor:
 			self.beginVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.beginVisitFuncdef(node)
+		if node.type == 'import_name':
+			self.beginVisitImportName(node)
 		elif node.type == 'name':
 			self.beginVisitName(node)
 		elif node.type == 'string':
@@ -203,6 +205,8 @@ class AstVisitor:
 			self.endVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
+		if node.type == 'import_name':
+			self.endVisitImportName(node)
 		elif node.type == 'name':
 			self.endVisitName(node)
 		elif node.type == 'string':
@@ -249,6 +253,20 @@ class AstVisitor:
 
 
 	def endVisitFuncdef(self, node):
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[-1].node
+			if node == contextNode:
+				self.contextStack.pop()
+
+
+	def beginVisitImportName(self, node):
+		importedNameNode = getFirstDirectChildWithType(node, 'name')
+		if importedNameNode is not None:
+			if len(self.getDefinitionsOfNode(importedNameNode, self.sourceFilePath)) == 0:
+				self.client.recordError('Module named "' + importedNameNode.value + '" has not been found.', False, getSourceRangeOfNode(importedNameNode))
+
+
+	def endVisitImportName(self, node):
 		if len(self.contextStack) > 0:
 			contextNode = self.contextStack[-1].node
 			if node == contextNode:
