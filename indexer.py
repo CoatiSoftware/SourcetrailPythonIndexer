@@ -188,6 +188,10 @@ class AstVisitor:
 			self.beginVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.beginVisitFuncdef(node)
+		if node.type == 'import_from':
+			self.beginVisitImportFrom(node)
+		if node.type == 'import_name':
+			self.beginVisitImportName(node)
 		elif node.type == 'name':
 			self.beginVisitName(node)
 		elif node.type == 'string':
@@ -203,6 +207,10 @@ class AstVisitor:
 			self.endVisitClassdef(node)
 		elif node.type == 'funcdef':
 			self.endVisitFuncdef(node)
+		if node.type == 'import_from':
+			self.endVisitImportFrom(node)
+		if node.type == 'import_name':
+			self.endVisitImportName(node)
 		elif node.type == 'name':
 			self.endVisitName(node)
 		elif node.type == 'string':
@@ -249,6 +257,28 @@ class AstVisitor:
 
 
 	def endVisitFuncdef(self, node):
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[-1].node
+			if node == contextNode:
+				self.contextStack.pop()
+
+
+	def beginVisitImportName(self, node):
+		self.recordErrorsForUnsolvedImports(node)
+
+
+	def endVisitImportName(self, node):
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[-1].node
+			if node == contextNode:
+				self.contextStack.pop()
+
+
+	def beginVisitImportFrom(self, node):
+		self.recordErrorsForUnsolvedImports(node)
+
+
+	def endVisitImportFrom(self, node):
 		if len(self.contextStack) > 0:
 			contextNode = self.contextStack[-1].node
 			if node == contextNode:
@@ -340,6 +370,41 @@ class AstVisitor:
 			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
+
+
+	def recordErrorsForUnsolvedImports(self, node):
+		if node.type == 'import_from':
+			for c in node.children:
+				if self.recordErrorsForUnsolvedImports(c) is False:
+					return False
+		elif node.type == 'import_as_names':
+			for c in node.children:
+				self.recordErrorsForUnsolvedImports(c)
+		elif node.type == 'import_as_name':
+			for c in node.children:
+				if c.type == 'keyword': # we just the children (usually only one) until we hit the "as" keyword
+					break
+				self.recordErrorsForUnsolvedImports(c)
+		elif node.type == 'import_name':
+			for c in node.children:
+				self.recordErrorsForUnsolvedImports(c)
+		elif node.type == 'dotted_as_names':
+			for c in node.children:
+				self.recordErrorsForUnsolvedImports(c)
+		elif node.type == 'dotted_as_name':
+			for c in node.children:
+				if c.type == 'keyword': # we just the children (usually only one) until we hit the "as" keyword
+					break
+				self.recordErrorsForUnsolvedImports(c)
+		elif node.type == 'dotted_name':
+			for c in node.children:
+				if self.recordErrorsForUnsolvedImports(c) is False:
+					return False
+		elif node.type == 'name':
+			if len(self.getDefinitionsOfNode(node, self.sourceFilePath)) == 0:
+				self.client.recordError('Imported symbol named "' + node.value + '" has not been found.', False, getSourceRangeOfNode(node))
+				return False
+		return True
 
 
 	def recordInstanceReference(self, node, definition):
