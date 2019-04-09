@@ -260,14 +260,19 @@ class AstVisitor:
 
 
 	def beginVisitImportName(self, node):
+		namesToSolve = []
 		importedNameNode = getFirstDirectChildWithType(node, 'name')
-		if importedNameNode is None:
+		if importedNameNode is not None:
+			namesToSolve.append(importedNameNode)
+		else:
 			dottedNameNode = getFirstDirectChildWithType(node, 'dotted_name')
 			if dottedNameNode is not None:
-				importedNameNode = getFirstDirectChildWithType(dottedNameNode, 'name')
-		if importedNameNode is not None:
-			if len(self.getDefinitionsOfNode(importedNameNode, self.sourceFilePath)) == 0:
-				self.client.recordError('Module named "' + importedNameNode.value + '" has not been found.', False, getSourceRangeOfNode(importedNameNode))
+				namesToSolve.extend(getDirectChildrenWithType(dottedNameNode, 'name'))
+
+		for nameToSolve in namesToSolve:
+			if len(self.getDefinitionsOfNode(nameToSolve, self.sourceFilePath)) == 0:
+				self.client.recordError('Module named "' + nameToSolve.value + '" has not been found.', False, getSourceRangeOfNode(nameToSolve))
+				return # we only record an error for the first unsolved import
 
 
 	def endVisitImportName(self, node):

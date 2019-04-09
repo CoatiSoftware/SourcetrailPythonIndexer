@@ -460,6 +460,14 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('ERROR: "Module named "this_is_not_a_real_package" has not been found." at [1:8|1:33]' in client.errors)
 
 
+	def test_indexer_records_error_if_imported_module_has_not_been_found(self):
+		client = self.indexSourceCode(
+			'import pkg.this_is_not_a_real_module\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertTrue('ERROR: "Module named "this_is_not_a_real_module" has not been found." at [1:12|1:36]' in client.errors)
+
+
 # Test GitHub Issues
 
 	def test_issue_6(self):
