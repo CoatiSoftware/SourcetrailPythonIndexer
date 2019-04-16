@@ -289,6 +289,9 @@ class AstVisitor:
 		if len(self.contextStack) == 0:
 			return
 
+		if node.value in ['True', 'False', 'None']: # these are not parsed as "keywords" in Python 2
+			return
+
 		for definition in self.getDefinitionsOfNode(node, self.sourceFilePath):
 			if definition is None:
 				continue
