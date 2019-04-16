@@ -553,7 +553,7 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test GitHub Issues
 
-	def test_issue_6(self):
+	def test_issue_6(self): # Member variable has wrong name qualifiers if initialized from function parameter
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def __init__(self, bar):\n'
@@ -562,9 +562,19 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('FIELD: virtual_file.Foo.baz at [3:8|3:10]' in client.symbols)
 
 
-	def test_issue_8(self):
+	def test_issue_8(self): # Check if compatible to used SourcetrailDB build
 		self.assertTrue(indexer.isSourcetrailDBVersionCompatible())
 
+
+	def test_issue_29(self): # Local symbol not solved correctly if defined in parent scope function
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def __init__(self):\n'
+			'		def bar():\n'
+			'			self.foo = 79\n'
+		)
+		self.assertTrue('virtual_file.Foo.__init__<self> at [2:15|2:18]' in client.localSymbols)
+		self.assertTrue('virtual_file.Foo.__init__<self> at [4:4|4:7]' in client.localSymbols)
 
 # Utility Functions
 

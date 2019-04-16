@@ -530,8 +530,7 @@ class AstVisitor:
 
 
 	def recordParamReference(self, node, definition):
-		definitionNameNode = definition._name.tree_name
-		localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(definitionNameNode))
+		localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(definition))
 		self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
 		return True
 
@@ -615,13 +614,33 @@ class AstVisitor:
 				)
 				self.client.recordReferenceLocation(referenceId, sourceRange)
 		else:
-			localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
+			localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(definition))
 			self.client.recordLocalSymbolLocation(localSymbolId, sourceRange)
 		return True
 
 
-	def getLocalSymbolName(self, node):
-		return str(self.contextStack[-1].name) + '<' + node.value + '>'
+	def getLocalSymbolName(self, definition):
+		definitionNameNode = definition._name.tree_name
+
+		definitionModulePath = definition.module_path
+		if definitionModulePath is None:
+			if self.sourceFilePath == _virtualFilePath:
+				definitionModulePath = self.sourceFilePath
+
+		contextName = ''
+		if definitionModulePath is not None:
+			parentFuncdef = getParentWithType(definitionNameNode, 'funcdef')
+			if parentFuncdef is not None:
+				parentFuncdefNameNode = getFirstDirectChildWithType(parentFuncdef, 'name')
+				if parentFuncdefNameNode is not None:
+					parentFuncdefNameHierarchy = self.getNameHierarchyOfNode(parentFuncdefNameNode, definitionModulePath)
+					if parentFuncdefNameHierarchy is not None:
+						contextName = parentFuncdefNameHierarchy.getDisplayString()
+
+		if len(contextName) == 0:
+			contextName = str(self.contextStack[-1].name)
+
+		return contextName + '<' + definitionNameNode.value + '>'
 
 
 	def getNameHierarchyFromModuleFilePath(self, filePath):
