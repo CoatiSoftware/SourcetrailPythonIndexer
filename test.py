@@ -568,6 +568,15 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue(indexer.isSourcetrailDBVersionCompatible())
 
 
+	def test_issue_27(self): # Boolean value "True" is recorded as "non-indexed global variable"
+		client = self.indexSourceCode(
+			'class Test():\n'
+			'	def foo(self, bar=True):\n'
+			'		pass\n'
+		)
+		self.assertEqual(len(client.references), 0)
+
+
 	def test_issue_29(self): # Local symbol not solved correctly if defined in parent scope function
 		client = self.indexSourceCode(
 			'class Foo:\n'
