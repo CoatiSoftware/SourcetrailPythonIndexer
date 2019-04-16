@@ -289,6 +289,9 @@ class AstVisitor:
 		if len(self.contextStack) == 0:
 			return
 
+		if node.value in ['True', 'False', 'None']: # these are not parsed as "keywords" in Python 2
+			return
+
 		for definition in self.getDefinitionsOfNode(node, self.sourceFilePath):
 			if definition is None:
 				continue
@@ -479,7 +482,7 @@ class AstVisitor:
 					# this would be the case for "class Foo(Bar)"
 					#                                       ^
 					referenceKind = srctrl.REFERENCE_INHERITANCE
-				elif node.parent.type == 'arglist' and node.parent.parent is not None and node.parent.parent.type == 'classdef':
+				elif node.parent.type in ['arglist', 'testlist'] and node.parent.parent is not None and node.parent.parent.type == 'classdef':
 					# this would be the case for "class Foo(Bar, Baz)"
 					#                                       ^    ^
 					referenceKind = srctrl.REFERENCE_INHERITANCE

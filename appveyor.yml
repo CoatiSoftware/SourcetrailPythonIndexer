@@ -5,8 +5,14 @@ image: Visual Studio 2017
 environment:
     matrix:
         - MBITS: 32
+          PYTHON_VERSION: 27
+          MSVC_VERSION: 15
+          DEPLOY: 0
+
+        - MBITS: 32
           PYTHON_VERSION: 37
           MSVC_VERSION: 15
+          DEPLOY: 1
 
 
 install:
@@ -82,6 +88,12 @@ after_build:
     - ps: copy SourcetrailDB/LICENSE.txt artifacts/$env:PACKAGE_NAME/license/3rd_party_licenses/license_sourcetraildb.txt
     - ps: copy SourcetrailDB/external/cpp_sqlite/license_cpp_sqlite.txt artifacts/$env:PACKAGE_NAME/license/3rd_party_licenses/
     - ps: copy SourcetrailDB/external/json/license_json.txt artifacts/$env:PACKAGE_NAME/license/3rd_party_licenses/
+    - ps: |
+        $env:ARTIFACTY_TO_DEPLOY = ""
+        if ($env:DEPLOY -eq "1") {
+            $env:ARTIFACTY_TO_DEPLOY = $env:PACKAGE_NAME
+        }
+        echo $env:ARTIFACTY_TO_DEPLOY
 
 
 test_script:
@@ -103,7 +115,7 @@ artifacts:
 
 deploy:
     provider: GitHub
-    artifact: $(PACKAGE_NAME)
+    artifact: $(ARTIFACTY_TO_DEPLOY)
     auth_token:
         secure: MB2DqEW2eCwgCYtz/5BEn18XweV4eU760lzt7zpZ9fGEU5mxxhh79FLzK8Ux++09
     on:
