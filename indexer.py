@@ -479,7 +479,7 @@ class AstVisitor:
 					# this would be the case for "class Foo(Bar)"
 					#                                       ^
 					referenceKind = srctrl.REFERENCE_INHERITANCE
-				elif node.parent.type == 'arglist' and node.parent.parent is not None and node.parent.parent.type == 'classdef':
+				elif node.parent.type in ['arglist', 'testlist'] and node.parent.parent is not None and node.parent.parent.type == 'classdef':
 					# this would be the case for "class Foo(Bar, Baz)"
 					#                                       ^    ^
 					referenceKind = srctrl.REFERENCE_INHERITANCE
