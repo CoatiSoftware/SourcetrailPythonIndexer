@@ -576,6 +576,17 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.Foo.__init__<self> at [2:15|2:18]' in client.localSymbols)
 		self.assertTrue('virtual_file.Foo.__init__<self> at [4:4|4:7]' in client.localSymbols)
 
+
+	def test_issue_34(self): # Context of method that is defined inside a for loop is not solved correctly
+		client = self.indexSourceCode(
+			'def foo():\n'
+			'	for bar in []:\n'
+			'		def baz():\n'
+			'			pass\n'
+		)
+		self.assertTrue('FUNCTION: virtual_file.foo.baz at [3:7|3:9] with scope [3:3|5:0]' in client.symbols)
+
+
 # Utility Functions
 
 	def indexSourceCode(self, sourceCode, sysPath = None, verbose = False):
