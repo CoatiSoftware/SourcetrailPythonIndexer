@@ -1085,8 +1085,9 @@ def getNamedParentNode(node):
 		parentNode = parentNode.parent
 
 	while parentNode is not None:
-		if getFirstDirectChildWithType(parentNode, 'name') is not None:
-			return parentNode
+		if parentNode.type not in ['for_stmt']:
+			if getFirstDirectChildWithType(parentNode, 'name') is not None:
+				return parentNode
 		parentNode = parentNode.parent
 
 	return None
