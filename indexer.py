@@ -554,14 +554,15 @@ class AstVisitor:
 		namedDefinitionParentNode = getParentWithTypeInList(definitionNameNode, ['classdef', 'funcdef'])
 		if namedDefinitionParentNode is not None:
 			if namedDefinitionParentNode.type in ['classdef']:
-				# definition is a static member variable
-				if definitionNameNode.start_pos == node.start_pos and definitionNameNode.end_pos == node.end_pos:
-					# node is the definition of the static member variable
-					symbolKind = srctrl.SYMBOL_FIELD
-					definitionKind = srctrl.DEFINITION_EXPLICIT
-				else:
-					# node is a usage of the static member variable
-					referenceKind = srctrl.REFERENCE_USAGE
+				if getNamedParentNode(definitionNameNode) == namedDefinitionParentNode:
+					# definition is not local to some other field instantiation but instead it is a static member variable
+					if definitionNameNode.start_pos == node.start_pos and definitionNameNode.end_pos == node.end_pos:
+						# node is the definition of the static member variable
+						symbolKind = srctrl.SYMBOL_FIELD
+						definitionKind = srctrl.DEFINITION_EXPLICIT
+					else:
+						# node is a usage of the static member variable
+						referenceKind = srctrl.REFERENCE_USAGE
 			elif namedDefinitionParentNode.type in ['funcdef']:
 				# definition may be a non-static member variable
 				if definitionNameNode.parent is not None and definitionNameNode.parent.type == 'trailer':

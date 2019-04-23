@@ -598,6 +598,16 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('FUNCTION: virtual_file.foo.baz at [3:7|3:9] with scope [3:3|5:0]' in client.symbols)
 
 
+	def test_issue_38(self): # Local symbols in field instantiation are recorded as global variables
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	bar = {"a": "b"}\n'
+			'	baz = dict((k, v) for k, v in bar.items())\n'
+		)
+		self.assertTrue('virtual_file.Foo<k> at [3:24|3:24]' in client.localSymbols)
+		self.assertTrue('virtual_file.Foo<v> at [3:27|3:27]' in client.localSymbols)
+
+
 # Utility Functions
 
 	def indexSourceCode(self, sourceCode, sysPath = None, verbose = False):
