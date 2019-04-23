@@ -1,7 +1,7 @@
 # Changelog
 
 
-## v1.db23.p4
+## v0.db23.p4
 
 **2019-04-23**
 
@@ -13,7 +13,7 @@
 * Fixed some name hierarchy related issues
 
 
-## v1.db23.p3
+## v0.db23.p3
 
 **2019-04-02**
 
@@ -32,7 +32,7 @@
 * Fixed CI pipeline did not fail if tests fail
 
 
-## v1.db23.p2
+## v0.db23.p2
 
 **2019-02-26**
 
@@ -41,14 +41,14 @@
 * Multi-line strings will now be recorded as atomic source ranges, which prevents Sourcetrail from splitting them up in the snippet view.
 
 
-## v1.db23.p1
+## v0.db23.p1
 
 **2019-02-18**
 
 * Added downloadable all-in-one release packages for Mac and Linux. The Windows release did not change.
 
 
-## v1.db23.p0
+## v0.db23.p0
 
 **2019-02-12**
 
