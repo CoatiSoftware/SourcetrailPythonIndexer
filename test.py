@@ -807,6 +807,17 @@ class TestAstVisitorClient():
 			self.referenceIdsToData[referenceId]['reference_location'].append(sourceRange.toString())
 
 
+	def recordReferenceIsAmbiuous(self, referenceId):
+		raise NotImplementedError
+
+
+	def recordReferenceToUnsolvedSymhol(self, contextSymbolId, referenceKind, sourceRange):
+		referencedSymbolId = self.recordSymbol(indexer.getNameHierarchyForUnsolvedSymbol())
+		referenceId = self.recordReference(contextSymbolId, referencedSymbolId, referenceKind)
+		self.recordReferenceLocation(referenceId, sourceRange)
+		return referenceId
+
+
 	def recordQualifierLocation(self, referencedSymbolId, sourceRange):
 		if referencedSymbolId not in self.qualifierIdsToData:
 			self.qualifierIdsToData[referencedSymbolId] = {

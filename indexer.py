@@ -335,13 +335,7 @@ class AstVisitor:
 				if self.recordStatementReference(node, definition):
 					return
 
-		referencedSymbolId = self.client.recordSymbol(getNameHierarchyForUnsolvedSymbol())
-		referenceId = self.client.recordReference(
-			self.contextStack[-1].id,
-			referencedSymbolId,
-			srctrl.REFERENCE_USAGE
-		)
-		self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+		self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
 
 
 	def endVisitName(self, node):
@@ -817,13 +811,13 @@ class AstVisitor:
 			if parentNode is not None:
 				parentNodeNameHierarchy = self.getNameHierarchyOfNode(parentNode, definitionModulePath)
 				if parentNodeNameHierarchy is None:
-					parentNodeNameHierarchy = getNameHierarchyForUnsolvedSymbol()
+					return None
 				parentNodeNameHierarchy.nameElements.append(nameElement)
 				return parentNodeNameHierarchy
 
 			nameHierarchy = self.getNameHierarchyFromModuleFilePath(nodeSourceFilePath)
 			if nameHierarchy is None:
-				nameHierarchy = getNameHierarchyForUnsolvedSymbol()
+				return None
 			nameHierarchy.nameElements.append(nameElement)
 			return nameHierarchy
 
@@ -928,6 +922,22 @@ class AstVisitorClient:
 	def recordReferenceLocation(self, referenceId, sourceRange):
 		srctrl.recordReferenceLocation(
 			referenceId,
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
+			sourceRange.endColumn
+		)
+
+
+	def recordReferenceIsAmbiuous(self, referenceId):
+		return srctrl.recordReferenceIsAmbiuous(referenceId)
+
+
+	def recordReferenceToUnsolvedSymhol(self, contextSymbolId, referenceKind, sourceRange):
+		return srctrl.recordReferenceToUnsolvedSymhol(
+			contextSymbolId,
+			referenceKind,
 			self.indexedFileId,
 			sourceRange.startLine,
 			sourceRange.startColumn,
