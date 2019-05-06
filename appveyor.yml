@@ -37,7 +37,7 @@ install:
     - cmd: pip install pyinstaller
     # prepare for SourcetrailDB build
     - ps: $env:SOURCETRAIL_DB_VERSION = python -c "from _version import _sourcetrail_db_version; print(_sourcetrail_db_version)"
-    - cmd: git clone -q --branch=%SOURCETRAIL_DB_VERSION% https://github.com/CoatiSoftware/SourcetrailDB.git
+    - cmd: git clone -q --branch=%SOURCETRAIL_DB_VERSION%.beta https://github.com/CoatiSoftware/SourcetrailDB.git
     # Install SWIG by Choco
     - ps: choco install -y --no-progress swig
 
