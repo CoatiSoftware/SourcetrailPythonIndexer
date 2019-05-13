@@ -786,20 +786,20 @@ class AstVisitor:
 			if definitionNameNode is None:
 				continue
 
-			parentNode = getNamedParentNode(definitionNameNode)
-
+			parentNode = getParentWithTypeInList(definitionNameNode.parent, ['classdef', 'funcdef'])
+			potentialSelfNode = getNamedParentNode(definitionNameNode)
 			# if the node is defines as a non-static member variable, we remove the "function_name.self" from the
 			# name hierarchy (e.g. "Foo.__init__.self.bar" gets shortened to "Foo.bar")
-			if parentNode is not None:
-				parentNameNode = getFirstDirectChildWithType(parentNode, 'name')
-				if parentNameNode is not None:
-					for parentDefinition in self.getDefinitionsOfNode(parentNameNode, definitionModulePath):
-						if parentDefinition is None or parentDefinition.type != 'param':
+			if potentialSelfNode is not None:
+				potentialSelfNameNode = getFirstDirectChildWithType(potentialSelfNode, 'name')
+				if potentialSelfNameNode is not None:
+					for potentialSelfDefinition in self.getDefinitionsOfNode(potentialSelfNameNode, definitionModulePath):
+						if potentialSelfDefinition is None or potentialSelfDefinition.type != 'param':
 							continue
 
-						parentDefinitionNameNode = parentDefinition._name.tree_name
+						potentialSelfDefinitionNameNode = potentialSelfDefinition._name.tree_name
 
-						potentialFuncdefNode = getNamedParentNode(parentDefinitionNameNode)
+						potentialFuncdefNode = getNamedParentNode(potentialSelfDefinitionNameNode)
 						if potentialFuncdefNode is None or potentialFuncdefNode.type != 'funcdef':
 							continue
 
@@ -807,7 +807,7 @@ class AstVisitor:
 						if potentialClassdefNode is None or potentialClassdefNode.type != 'classdef':
 							continue
 
-						preceedingNode = parentDefinitionNameNode.parent.get_previous_sibling()
+						preceedingNode = potentialSelfDefinitionNameNode.parent.get_previous_sibling()
 						if preceedingNode is not None and preceedingNode.type != 'param':
 							# 'node' is the first parameter of a member function (aka. 'self')
 							parentNode =  potentialClassdefNode
@@ -1086,9 +1086,8 @@ def getNamedParentNode(node):
 		parentNode = parentNode.parent
 
 	while parentNode is not None:
-		if parentNode.type not in ['for_stmt']:
-			if getFirstDirectChildWithType(parentNode, 'name') is not None:
-				return parentNode
+		if getFirstDirectChildWithType(parentNode, 'name') is not None:
+			return parentNode
 		parentNode = parentNode.parent
 
 	return None
