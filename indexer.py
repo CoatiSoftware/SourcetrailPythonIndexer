@@ -292,6 +292,7 @@ class AstVisitor:
 		if node.value in ['True', 'False', 'None']: # these are not parsed as "keywords" in Python 2
 			return
 
+		referenceIsUnsolved = True
 		for definition in self.getDefinitionsOfNode(node, self.sourceFilePath):
 			if definition is None:
 				continue
@@ -299,11 +300,11 @@ class AstVisitor:
 			if definition.type == 'instance':
 				if definition.line is None and definition.column is None:
 					if self.recordInstanceReference(node, definition):
-						return
+						referenceIsUnsolved = False
 
 			elif definition.type == 'module':
 				if self.recordModuleReference(node, definition):
-					return
+					referenceIsUnsolved = False
 
 			elif definition.type in ['class', 'function']:
 				(startLine, startColumn) = node.start_pos
@@ -313,11 +314,11 @@ class AstVisitor:
 
 				if definition.type == 'class':
 					if self.recordClassReference(node, definition):
-						return
+						referenceIsUnsolved = False
 
 				elif definition.type == 'function':
 					if self.recordFunctionReference(node, definition):
-						return
+						referenceIsUnsolved = False
 
 			elif definition.type == 'param':
 				if definition.line is None or definition.column is None:
@@ -325,7 +326,7 @@ class AstVisitor:
 					continue
 
 				if self.recordParamReference(node, definition):
-					return
+					referenceIsUnsolved = False
 
 			elif definition.type == 'statement':
 				if definition.line is None or definition.column is None:
@@ -333,9 +334,10 @@ class AstVisitor:
 					continue
 
 				if self.recordStatementReference(node, definition):
-					return
+					referenceIsUnsolved = False
 
-		self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
+		if referenceIsUnsolved:
+			self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
 
 
 	def endVisitName(self, node):
