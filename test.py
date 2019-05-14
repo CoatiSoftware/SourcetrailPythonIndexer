@@ -608,6 +608,13 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.Foo<v> at [3:27|3:27]' in client.localSymbols)
 
 
+	def test_issue_40(self): # global symbol defined in iterable argument is recorded as child of "unsolved symbol"
+		client = self.indexSourceCode(
+			'sorted(name[:-3] for name in ["foobar"])\n'
+		)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.name at [1:22|1:25]' in client.symbols)
+
+
 # Utility Functions
 
 	def indexSourceCode(self, sourceCode, sysPath = None, verbose = False):
