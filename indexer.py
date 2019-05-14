@@ -18,9 +18,9 @@ def getEnvironment(environmentDirectoryPath = None):
 			environment = jedi.create_environment(environmentDirectoryPath)
 			environment._get_subprocess() # check if this environment is really functional
 			return environment
-		except Exception:
+		except Exception as e:
 			print('WARNING: The provided environment path "' + environmentDirectoryPath + '" does not specify a functional Python '
-				'environment. Using fallback environment instead.')
+				'environment (details: "' + str(e) + '"). Using fallback environment instead.')
 			pass
 
 	try:
