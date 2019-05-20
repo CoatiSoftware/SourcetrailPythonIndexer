@@ -50,7 +50,7 @@ script:
   - echo ${PACKAGE_NAME}
   - |
     SOURCETRAIL_DB_VERSION=$(python3 -c "from _version import _sourcetrail_db_version; print(_sourcetrail_db_version)")
-    git clone -q --branch=${SOURCETRAIL_DB_VERSION}.beta https://github.com/CoatiSoftware/SourcetrailDB.git
+    git clone -q --branch=${SOURCETRAIL_DB_VERSION} https://github.com/CoatiSoftware/SourcetrailDB.git
   - cd SourcetrailDB
   - mkdir build
   - cd build
