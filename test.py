@@ -615,6 +615,26 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('GLOBAL_VARIABLE: virtual_file.name at [1:22|1:25]' in client.symbols)
 
 
+	def test_issue_41(self): # Indexer fails to record multiple call edges for a single call sit
+		client = self.indexSourceCode(
+			'def foo(bar):\n'
+			'	bar.bar()\n'
+			'\n'
+			'class A:\n'
+			'	def bar(self):\n'
+			'		print("A")\n'
+			'\n'
+			'class B:\n'
+			'	def bar(self):\n'
+			'		print("B")\n'
+			'\n'
+			'foo(A())\n'
+			'foo(B())\n'
+		)
+		self.assertTrue('CALL: virtual_file.foo -> virtual_file.A.bar at [2:6|2:8]' in client.references)
+		self.assertTrue('CALL: virtual_file.foo -> virtual_file.B.bar at [2:6|2:8]' in client.references)
+
+
 # Utility Functions
 
 	def indexSourceCode(self, sourceCode, sysPath = None, verbose = False):
@@ -812,6 +832,17 @@ class TestAstVisitorClient():
 	def recordReferenceLocation(self, referenceId, sourceRange):
 		if referenceId in self.referenceIdsToData:
 			self.referenceIdsToData[referenceId]['reference_location'].append(sourceRange.toString())
+
+
+	def recordReferenceIsAmbiuous(self, referenceId):
+		raise NotImplementedError
+
+
+	def recordReferenceToUnsolvedSymhol(self, contextSymbolId, referenceKind, sourceRange):
+		referencedSymbolId = self.recordSymbol(indexer.getNameHierarchyForUnsolvedSymbol())
+		referenceId = self.recordReference(contextSymbolId, referencedSymbolId, referenceKind)
+		self.recordReferenceLocation(referenceId, sourceRange)
+		return referenceId
 
 
 	def recordQualifierLocation(self, referencedSymbolId, sourceRange):

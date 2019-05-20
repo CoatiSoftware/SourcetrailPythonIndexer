@@ -1,3 +1,3 @@
-__version__ = 'v0.db23.p4'
+__version__ = 'v0.db24.p0'
 
-_sourcetrail_db_version = 'v2.db23.p2'
+_sourcetrail_db_version = 'v2.db24.p0'

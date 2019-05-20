@@ -18,9 +18,9 @@ def getEnvironment(environmentDirectoryPath = None):
 			environment = jedi.create_environment(environmentDirectoryPath)
 			environment._get_subprocess() # check if this environment is really functional
 			return environment
-		except Exception:
+		except Exception as e:
 			print('WARNING: The provided environment path "' + environmentDirectoryPath + '" does not specify a functional Python '
-				'environment. Using fallback environment instead.')
+				'environment (details: "' + str(e) + '"). Using fallback environment instead.')
 			pass
 
 	try:
@@ -292,6 +292,7 @@ class AstVisitor:
 		if node.value in ['True', 'False', 'None']: # these are not parsed as "keywords" in Python 2
 			return
 
+		referenceIsUnsolved = True
 		for definition in self.getDefinitionsOfNode(node, self.sourceFilePath):
 			if definition is None:
 				continue
@@ -299,11 +300,11 @@ class AstVisitor:
 			if definition.type == 'instance':
 				if definition.line is None and definition.column is None:
 					if self.recordInstanceReference(node, definition):
-						return
+						referenceIsUnsolved = False
 
 			elif definition.type == 'module':
 				if self.recordModuleReference(node, definition):
-					return
+					referenceIsUnsolved = False
 
 			elif definition.type in ['class', 'function']:
 				(startLine, startColumn) = node.start_pos
@@ -313,11 +314,11 @@ class AstVisitor:
 
 				if definition.type == 'class':
 					if self.recordClassReference(node, definition):
-						return
+						referenceIsUnsolved = False
 
 				elif definition.type == 'function':
 					if self.recordFunctionReference(node, definition):
-						return
+						referenceIsUnsolved = False
 
 			elif definition.type == 'param':
 				if definition.line is None or definition.column is None:
@@ -325,7 +326,7 @@ class AstVisitor:
 					continue
 
 				if self.recordParamReference(node, definition):
-					return
+					referenceIsUnsolved = False
 
 			elif definition.type == 'statement':
 				if definition.line is None or definition.column is None:
@@ -333,15 +334,10 @@ class AstVisitor:
 					continue
 
 				if self.recordStatementReference(node, definition):
-					return
+					referenceIsUnsolved = False
 
-		referencedSymbolId = self.client.recordSymbol(getNameHierarchyForUnsolvedSymbol())
-		referenceId = self.client.recordReference(
-			self.contextStack[-1].id,
-			referencedSymbolId,
-			srctrl.REFERENCE_USAGE
-		)
-		self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+		if referenceIsUnsolved:
+			self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
 
 
 	def endVisitName(self, node):
@@ -817,13 +813,13 @@ class AstVisitor:
 			if parentNode is not None:
 				parentNodeNameHierarchy = self.getNameHierarchyOfNode(parentNode, definitionModulePath)
 				if parentNodeNameHierarchy is None:
-					parentNodeNameHierarchy = getNameHierarchyForUnsolvedSymbol()
+					return None
 				parentNodeNameHierarchy.nameElements.append(nameElement)
 				return parentNodeNameHierarchy
 
 			nameHierarchy = self.getNameHierarchyFromModuleFilePath(nodeSourceFilePath)
 			if nameHierarchy is None:
-				nameHierarchy = getNameHierarchyForUnsolvedSymbol()
+				return None
 			nameHierarchy.nameElements.append(nameElement)
 			return nameHierarchy
 
@@ -928,6 +924,22 @@ class AstVisitorClient:
 	def recordReferenceLocation(self, referenceId, sourceRange):
 		srctrl.recordReferenceLocation(
 			referenceId,
+			self.indexedFileId,
+			sourceRange.startLine,
+			sourceRange.startColumn,
+			sourceRange.endLine,
+			sourceRange.endColumn
+		)
+
+
+	def recordReferenceIsAmbiuous(self, referenceId):
+		return srctrl.recordReferenceIsAmbiuous(referenceId)
+
+
+	def recordReferenceToUnsolvedSymhol(self, contextSymbolId, referenceKind, sourceRange):
+		return srctrl.recordReferenceToUnsolvedSymhol(
+			contextSymbolId,
+			referenceKind,
 			self.indexedFileId,
 			sourceRange.startLine,
 			sourceRange.startColumn,
