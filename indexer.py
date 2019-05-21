@@ -297,44 +297,47 @@ class AstVisitor:
 			if definition is None:
 				continue
 
-			if definition.type == 'instance':
-				if definition.line is None and definition.column is None:
-					if self.recordInstanceReference(node, definition):
+			try:
+				if definition.type == 'instance':
+					if definition.line is None and definition.column is None:
+						if self.recordInstanceReference(node, definition):
+							referenceIsUnsolved = False
+
+				elif definition.type == 'module':
+					if self.recordModuleReference(node, definition):
 						referenceIsUnsolved = False
 
-			elif definition.type == 'module':
-				if self.recordModuleReference(node, definition):
-					referenceIsUnsolved = False
+				elif definition.type in ['class', 'function']:
+					(startLine, startColumn) = node.start_pos
+					if definition.line == startLine and definition.column == startColumn:
+						# Early exit. We don't record references for locations of classes or functions that are definitions
+						return
 
-			elif definition.type in ['class', 'function']:
-				(startLine, startColumn) = node.start_pos
-				if definition.line == startLine and definition.column == startColumn:
-					# Early exit. We don't record references for locations of classes or functions that are definitions
-					return
+					if definition.type == 'class':
+						if self.recordClassReference(node, definition):
+							referenceIsUnsolved = False
 
-				if definition.type == 'class':
-					if self.recordClassReference(node, definition):
+					elif definition.type == 'function':
+						if self.recordFunctionReference(node, definition):
+							referenceIsUnsolved = False
+
+				elif definition.type == 'param':
+					if definition.line is None or definition.column is None:
+						# Early skip and try next definition. For now we don't record references for names that don't have a valid definition location
+						continue
+
+					if self.recordParamReference(node, definition):
 						referenceIsUnsolved = False
 
-				elif definition.type == 'function':
-					if self.recordFunctionReference(node, definition):
+				elif definition.type == 'statement':
+					if definition.line is None or definition.column is None:
+						# Early skip and try next definition. For now we don't record references for names that don't have a valid definition location
+						continue
+
+					if self.recordStatementReference(node, definition):
 						referenceIsUnsolved = False
-
-			elif definition.type == 'param':
-				if definition.line is None or definition.column is None:
-					# Early skip and try next definition. For now we don't record references for names that don't have a valid definition location
-					continue
-
-				if self.recordParamReference(node, definition):
-					referenceIsUnsolved = False
-
-			elif definition.type == 'statement':
-				if definition.line is None or definition.column is None:
-					# Early skip and try next definition. For now we don't record references for names that don't have a valid definition location
-					continue
-
-				if self.recordStatementReference(node, definition):
-					referenceIsUnsolved = False
+			except Exception:
+				pass
 
 		if referenceIsUnsolved:
 			self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
