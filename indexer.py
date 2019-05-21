@@ -98,7 +98,7 @@ def indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, 
 		print('INFO: Indexing source file "' + sourceFilePath + '".')
 
 	sourceCode = ''
-	with open(sourceFilePath, 'r') as input:
+	with open(sourceFilePath, 'r', encoding='utf-8') as input:
 		sourceCode=input.read()
 
 	environment = getEnvironment(environmentDirectoryPath)
