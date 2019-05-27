@@ -12,16 +12,24 @@ from _version import _sourcetrail_db_version
 _virtualFilePath = 'virtual_file.py'
 
 
-def getEnvironment(environmentDirectoryPath = None):
-	if environmentDirectoryPath is not None:
+def isValidEnvironment(environmentPath):
+	try:
+		environment = jedi.create_environment(environmentPath)
+		environment._get_subprocess() # check if this environment is really functional
+	except Exception:
+		return False
+	return True
+
+
+def getEnvironment(environmentPath = None):
+	if environmentPath is not None:
 		try:
-			environment = jedi.create_environment(environmentDirectoryPath)
+			environment = jedi.create_environment(environmentPath)
 			environment._get_subprocess() # check if this environment is really functional
 			return environment
 		except Exception as e:
-			print('WARNING: The provided environment path "' + environmentDirectoryPath + '" does not specify a functional Python '
+			print('WARNING: The provided environment path "' + environmentPath + '" does not specify a functional Python '
 				'environment (details: "' + str(e) + '"). Using fallback environment instead.')
-			pass
 
 	try:
 		environment = jedi.get_default_environment()
@@ -92,7 +100,7 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, s
 	astVisitor.traverseNode(module_node)
 
 
-def indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, astVisitorClient, isVerbose):
+def indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisitorClient, isVerbose):
 
 	if isVerbose:
 		print('INFO: Indexing source file "' + sourceFilePath + '".')
@@ -101,7 +109,7 @@ def indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, 
 	with open(sourceFilePath, 'r', encoding='utf-8') as input:
 		sourceCode=input.read()
 
-	environment = getEnvironment(environmentDirectoryPath)
+	environment = getEnvironment(environmentPath)
 
 	if isVerbose:
 		print('INFO: Using Python environment at "' + environment.path + '" for indexing.')
