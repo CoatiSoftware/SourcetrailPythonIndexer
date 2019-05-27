@@ -46,6 +46,10 @@ def main():
 		processIndexCommand(args)
 	elif args.command == checkEnvironmentCommandName:
 		processCheckEnvironmentCommand(args)
+	else:
+		os.write(2, b"Error: No command has been specified.") # write to stderr
+		return 1
+	return 0
 
 
 def processIndexCommand(args):
@@ -101,11 +105,9 @@ def processCheckEnvironmentCommand(args):
 
 	message = indexer.isValidEnvironment(environmentPath)
 	if not message:
-		print('Provided path is a valid Python environment.')
-		return 0
-
-	print('Provided path is not a valid Python environment: ' + message)
-	return 1
+		print('The provided path is a valid Python environment.')
+	else:
+		print('The provided path is not a valid Python environment: ' + message)
 
 
 def indexSourceFile(sourceFilePath, environmentPath, workingDirectory, verbose):
