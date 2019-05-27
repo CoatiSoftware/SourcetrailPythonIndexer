@@ -16,9 +16,9 @@ def isValidEnvironment(environmentPath):
 	try:
 		environment = jedi.create_environment(environmentPath)
 		environment._get_subprocess() # check if this environment is really functional
-	except Exception:
-		return False
-	return True
+	except Exception as e:
+		return str(e)
+	return ''
 
 
 def getEnvironment(environmentPath = None):

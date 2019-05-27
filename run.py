@@ -99,11 +99,12 @@ def processCheckEnvironmentCommand(args):
 	if environmentPath is not None and not os.path.isabs(environmentPath):
 		environmentPath = os.path.join(workingDirectory, environmentPath)
 
-	if indexer.isValidEnvironment(environmentPath):
+	message = indexer.isValidEnvironment(environmentPath)
+	if not message:
 		print('Provided path is a valid Python environment.')
 		return 0
 
-	print('Provided path is not a valid Python environment.')
+	print('Provided path is not a valid Python environment: ' + message)
 	return 1
 
 
