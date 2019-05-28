@@ -7,6 +7,12 @@ import sourcetraildb as srctrl
 from _version import __version__
 from _version import _sourcetrail_db_version
 
+from indexer import AstVisitorClient
+from indexer import SourceRange
+from indexer import NameHierarchy
+from indexer import NameElement
+from indexer import NameHierarchyEncoder
+
 
 _virtualFilePath = 'virtual_file.py'
 
@@ -140,18 +146,18 @@ class AstVisitor:
 		elif node.type == 'error_leaf':
 			self.endVisitErrorLeaf(node)
 
-		
+
 	def traverseFuncdefNode(self, node):
 		if node is None:
 			return
-			
+
 		self.beginVisitFuncdef(node)
 
 		childTypes = ['pre_params', 'params', 'post_params']
 
 		if hasattr(node, 'children'):
 			for c in node.children:
-				
+
 				self.traverseNode(c)
 
 		self.endVisitFuncdef(node)
@@ -365,222 +371,6 @@ class VerboseAstVisitor(AstVisitor):
 		self.indentationLevel += 1
 		AstVisitor.traverseNode(self, node)
 		self.indentationLevel -= 1
-
-
-class AstVisitorClient:
-
-	def __init__(self):
-		self.indexedFileId = 0
-		if srctrl.isCompatible():
-			print('INFO: Loaded database is compatible.')
-		else:
-			print('WARNING: Loaded database is not compatible.')
-			print('INFO: Supported DB Version: ' + str(srctrl.getSupportedDatabaseVersion()))
-			print('INFO: Loaded DB Version: ' + str(srctrl.getLoadedDatabaseVersion()))
-
-
-	def recordSymbol(self, nameHierarchy):
-		if nameHierarchy is not None:
-			symbolId = srctrl.recordSymbol(nameHierarchy.serialize())
-			return symbolId
-		return 0
-
-
-	def recordSymbolDefinitionKind(self, symbolId, symbolDefinitionKind):
-		srctrl.recordSymbolDefinitionKind(symbolId, symbolDefinitionKind)
-
-
-	def recordSymbolKind(self, symbolId, symbolKind):
-		srctrl.recordSymbolKind(symbolId, symbolKind)
-
-
-	def recordSymbolLocation(self, symbolId, sourceRange):
-		srctrl.recordSymbolLocation(
-			symbolId,
-			self.indexedFileId,
-			sourceRange.startLine,
-			sourceRange.startColumn,
-			sourceRange.endLine,
-			sourceRange.endColumn
-		)
-
-
-	def recordSymbolScopeLocation(self, symbolId, sourceRange):
-		srctrl.recordSymbolScopeLocation(
-			symbolId,
-			self.indexedFileId,
-			sourceRange.startLine,
-			sourceRange.startColumn,
-			sourceRange.endLine,
-			sourceRange.endColumn
-		)
-
-
-	def recordSymbolSignatureLocation(self, symbolId, sourceRange):
-		srctrl.recordSymbolSignatureLocation(
-			symbolId,
-			self.indexedFileId,
-			sourceRange.startLine,
-			sourceRange.startColumn,
-			sourceRange.endLine,
-			sourceRange.endColumn
-		)
-
-
-	def recordReference(self, contextSymbolId, referencedSymbolId, referenceKind):
-		return srctrl.recordReference(
-			contextSymbolId,
-			referencedSymbolId,
-			referenceKind
-		)
-
-
-	def recordReferenceLocation(self, referenceId, sourceRange):
-		srctrl.recordReferenceLocation(
-			referenceId,
-			self.indexedFileId,
-			sourceRange.startLine,
-			sourceRange.startColumn,
-			sourceRange.endLine,
-			sourceRange.endColumn
-		)
-
-
-	def recordReferenceIsAmbiuous(self, referenceId):
-		return srctrl.recordReferenceIsAmbiuous(referenceId)
-
-
-	def recordReferenceToUnsolvedSymhol(self, contextSymbolId, referenceKind, sourceRange):
-		return srctrl.recordReferenceToUnsolvedSymhol(
-			contextSymbolId,
-			referenceKind,
-			self.indexedFileId,
-			sourceRange.startLine,
-			sourceRange.startColumn,
-			sourceRange.endLine,
-			sourceRange.endColumn
-		)
-
-
-	def recordQualifierLocation(self, referencedSymbolId, sourceRange):
-		return srctrl.recordQualifierLocation(
-			referencedSymbolId,
-			self.indexedFileId,
-			sourceRange.startLine,
-			sourceRange.startColumn,
-			sourceRange.endLine,
-			sourceRange.endColumn
-		)
-
-
-	def recordFile(self, filePath):
-		self.indexedFileId = srctrl.recordFile(filePath.replace('\\', '/'))
-		srctrl.recordFileLanguage(self.indexedFileId, 'python')
-		return self.indexedFileId
-
-
-	def recordFileLanguage(self, fileId, languageIdentifier):
-		srctrl.recordFileLanguage(fileId, languageIdentifier)
-
-
-	def recordLocalSymbol(self, name):
-		return srctrl.recordLocalSymbol(name)
-
-
-	def recordLocalSymbolLocation(self, localSymbolId, sourceRange):
-		srctrl.recordLocalSymbolLocation(
-			localSymbolId,
-			self.indexedFileId,
-			sourceRange.startLine,
-			sourceRange.startColumn,
-			sourceRange.endLine,
-			sourceRange.endColumn
-		)
-
-
-	def recordAtomicSourceRange(self, sourceRange):
-		srctrl.recordAtomicSourceRange(
-			self.indexedFileId,
-			sourceRange.startLine,
-			sourceRange.startColumn,
-			sourceRange.endLine,
-			sourceRange.endColumn
-		)
-
-
-	def recordError(self, message, fatal, sourceRange):
-		srctrl.recordError(
-			message,
-			fatal,
-			self.indexedFileId,
-			sourceRange.startLine,
-			sourceRange.startColumn,
-			sourceRange.endLine,
-			sourceRange.endColumn
-		)
-
-
-class SourceRange:
-
-	def __init__(self, startLine, startColumn, endLine, endColumn):
-		self.startLine = startLine
-		self.startColumn = startColumn
-		self.endLine = endLine
-		self.endColumn = endColumn
-
-
-	def toString(self):
-		return '[' + str(self.startLine) + ':' + str(self.startColumn) + '|' + str(self.endLine) + ':' + str(self.endColumn) + ']'
-
-
-class NameHierarchy():
-
-	unsolvedSymbolName = 'unsolved symbol' # this name should not collide with normal symbol name, because they cannot contain space characters
-
-	def __init__(self, nameElement, delimiter):
-		self.nameElements = []
-		if nameElement is not None:
-			self.nameElements.append(nameElement)
-		self.delimiter = delimiter
-
-
-	def serialize(self):
-		return json.dumps(self, cls=NameHierarchyEncoder)
-
-
-	def getDisplayString(self):
-		displayString = ''
-		isFirst = True
-		for nameElement in self.nameElements:
-			if not isFirst:
-				displayString += self.delimiter
-			isFirst = False
-			if len(nameElement.prefix) > 0:
-				displayString += nameElement.prefix + ' '
-			displayString += nameElement.name
-			if len(nameElement.postfix) > 0:
-				displayString += nameElement.postfix
-		return displayString
-
-
-class NameElement:
-
-	def __init__(self, name, prefix = '', postfix = ''):
-		self.name = name
-		self.prefix = prefix
-		self.postfix = postfix
-
-
-class NameHierarchyEncoder(json.JSONEncoder):
-
-	def default(self, obj):
-		if isinstance(obj, NameHierarchy):
-			return {
-				'name_delimiter': obj.delimiter,
-				'name_elements': [nameElement.__dict__ for nameElement in obj.nameElements]
-			}
-		# Let the base class default method raise the TypeError
-		return json.JSONEncoder.default(self, obj)
 
 
 def getNameHierarchyForUnsolvedSymbol():
