@@ -1,5 +1,6 @@
 import argparse
 import indexer
+import shallow_indexer
 import os
 import sourcetraildb as srctrl
 
@@ -26,6 +27,7 @@ def main():
 	)
 	parserIndex.add_argument('--clear', help='clear the database before indexing', action='store_true', required=False)
 	parserIndex.add_argument('--verbose', help='enable verbose console output', action='store_true', required=False)
+	parserIndex.add_argument('--shallow', action='store_true', required=False)
 
 	checkEnvironmentCommandName = 'check-environment'
 	parserCheckEnvironment = subparsers.add_parser(
@@ -89,7 +91,7 @@ def processIndexCommand(args):
 			print('INFO: Loaded database contains data.')
 
 	srctrl.beginTransaction()
-	indexSourceFile(sourceFilePath, environmentPath, workingDirectory, args.verbose)
+	indexSourceFile(sourceFilePath, environmentPath, workingDirectory, args.verbose, args.shallow)
 	srctrl.commitTransaction()
 
 	if not srctrl.close():
@@ -110,9 +112,13 @@ def processCheckEnvironmentCommand(args):
 		print('The provided path is not a valid Python environment: ' + message)
 
 
-def indexSourceFile(sourceFilePath, environmentPath, workingDirectory, verbose):
-	astVisitorClient = indexer.AstVisitorClient()
-	indexer.indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisitorClient, verbose)
+def indexSourceFile(sourceFilePath, environmentPath, workingDirectory, verbose, shallow):
+	if shallow:
+		astVisitorClient = shallow_indexer.AstVisitorClient()
+		shallow_indexer.indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisitorClient, verbose)
+	else:
+		astVisitorClient = indexer.AstVisitorClient()
+		indexer.indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisitorClient, verbose)
 
 
 if __name__ == '__main__':
