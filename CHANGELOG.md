@@ -1,6 +1,33 @@
 # Changelog
 
 
+## v1.db24.p0
+
+**2019-05-28**
+
+* Changed commandline api by moving the current main functionality of indexing a source file to the "index" command
+* Added new "check-environment" command that can be used to check whether a given Python environment will be usable by the indexer
+
+
+## v0.db24.p1
+
+**2019-05-21**
+
+* Added exception handling for accessing jedi definition, so that these exceptions only cause one symbol to be unsolved and the rest of the file will still be indexed
+* Switched to reading source code using UTF-8 encoding by default
+
+
+## v0.db24.p0
+
+**2019-05-20**
+
+* Updated to Sourcetrail database format version 24
+* Implemented recording unsolved symbol locations as "unsolved", so they can be displayed as such by Sourcetrail
+* Implemented allowing to record multiple references for one source location (e.g. when different code paths result in different functions being called)
+* Implemented printing of detailed error if provided python environment is invalid
+* Fixed an issue where global symbols defined in iterable argument are recorded as child of "unsolved symbol" (issue #40)
+
+
 ## v0.db23.p4
 
 **2019-04-23**
