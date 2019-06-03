@@ -14,8 +14,6 @@ from indexer import NameElement
 from indexer import NameHierarchyEncoder
 
 
-import astroid
-
 _virtualFilePath = 'virtual_file.py'
 
 
@@ -40,7 +38,6 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, s
 	sourceFilePath = _virtualFilePath
 
 	moduleNode = parso.parse(sourceCode)
-	return
 
 	if (isVerbose):
 		astVisitor = VerboseAstVisitor(astVisitorClient, sourceFilePath, sourceCode, sysPath)
@@ -59,20 +56,12 @@ def indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, 
 	with open(sourceFilePath, 'r', encoding='utf-8') as input:
 		sourceCode=input.read()
 
-	moduleNode = astroid.parse('''def func(first, second):
-    return first + second
-
-arg_1 = 2
-arg_2 = 3
-func(arg_1, arg_2)
-''')
-
-#	moduleNode = astroid.parse(sourceCode)
+	moduleNode = parso.parse(sourceCode)
 
 	if (isVerbose):
-		astVisitor = VerboseAstroidVisitor(astVisitorClient, sourceFilePath)
+		astVisitor = VerboseAstVisitor(astVisitorClient, sourceFilePath)
 	else:
-		astVisitor = AstroidVisitor(astVisitorClient, sourceFilePath)
+		astVisitor = AstVisitor(astVisitorClient, sourceFilePath)
 
 	astVisitor.traverseNode(moduleNode)
 
@@ -83,76 +72,6 @@ class ContextInfo:
 		self.id = id
 		self.name = name
 		self.node = node
-
-
-class AstroidVisitor:
-	def __init__(self, client, sourceFilePath):
-		pass
-
-
-	def traverseNode(self, node):
-		if node is None:
-			return
-
-		if hasattr(node, 'get_children'):
-			for c in node.get_children():
-				self.traverseNode(c)
-
-
-class VerboseAstroidVisitor(AstroidVisitor):
-	def __init__(self, client, sourceFilePath):
-		AstroidVisitor.__init__(self, client, sourceFilePath)
-		self.indentationLevel = 0
-		self.indentationToken = '| '
-
-
-	def traverseNode(self, node):
-		currentString = ''
-		for i in range(0, self.indentationLevel):
-			currentString += self.indentationToken
-
-		currentString += node.__class__.__name__
-
-		if hasattr(node, 'name'):
-			currentString += ' (' + repr(node.name) + ')'
-
-		sourceRange = getSourceRangeOfAstroidNode(node)
-		if sourceRange is not None:
-			currentString += ' ' + sourceRange.toString()
-
-		print('AST: ' + currentString)
-
-		self.indentationLevel += 1
-		AstroidVisitor.traverseNode(self, node)
-		self.indentationLevel -= 1
-
-
-def getSourceRangeOfAstroidNode(node):
-	startLine = node.fromlineno
-	if startLine is None:
-		return None
-
-	startColumn = node.col_offset
-	if startColumn is None:
-		return None
-
-	endLine = node.tolineno
-	if endLine is None:
-		return None
-
-	if startLine == endLine:
-		endColumn = startColumn
-#		if hasattr(node, 'name'):
-#			endColumn += len(node.name)
-	else:
-		endColumn = 0
-
-
-	return SourceRange(startLine, startColumn + 1, endLine, endColumn + 1)
-
-
-
-
 
 
 class AstVisitor:

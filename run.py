@@ -5,8 +5,6 @@ import os
 import sourcetraildb as srctrl
 
 
-import time
-
 def main():
 	parser = argparse.ArgumentParser(description='Python source code indexer that generates a Sourcetrail compatible database.')
 	parser.add_argument('--version', action='version', version='SourcetrailPythonIndexer {version}'.format(version=indexer.__version__))
@@ -115,15 +113,12 @@ def processCheckEnvironmentCommand(args):
 
 
 def indexSourceFile(sourceFilePath, environmentPath, workingDirectory, verbose, shallow):
-	startTime = time.time()
 	if shallow:
 		astVisitorClient = shallow_indexer.AstVisitorClient()
 		shallow_indexer.indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisitorClient, verbose)
 	else:
 		astVisitorClient = indexer.AstVisitorClient()
 		indexer.indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisitorClient, verbose)
-	elapsedTime = time.time() - startTime
-	print('elapsed time: ' + str(elapsedTime))
 
 
 if __name__ == '__main__':
