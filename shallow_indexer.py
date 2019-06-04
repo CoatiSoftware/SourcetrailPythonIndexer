@@ -143,6 +143,8 @@ class AstVisitor:
 			self.traverseFuncdef(node)
 		elif node.type == 'param':
 			self.traverseParam(node)
+		elif node.type == 'argument':
+			self.traverseArgument(node)
 		else:
 			if node.type == 'name':
 				self.beginVisitName(node)
@@ -202,6 +204,21 @@ class AstVisitor:
 		self.traverseNode(node.default)
 
 		self.endVisitParam(node)
+
+
+	def traverseArgument(self, node):
+		if node is None:
+			return
+
+		childTraverseStartIndex = 0
+
+		for i in range(len(node.children)):
+			if node.children[i].type == 'operator' and node.children[i].value == '=':
+				childTraverseStartIndex = i + 1
+				break
+
+		for i in range(childTraverseStartIndex, len(node.children)):
+			self.traverseNode(node.children[i])
 
 #----------------
 
