@@ -1,6 +1,7 @@
 import parso
 import json
 import os
+from enum import Enum
 import sys
 
 import sourcetraildb as srctrl
@@ -57,7 +58,6 @@ def indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, 
 		sourceCode=input.read()
 
 	moduleNode = parso.parse(sourceCode)
-
 	if (isVerbose):
 		astVisitor = VerboseAstVisitor(astVisitorClient, sourceFilePath)
 	else:
@@ -65,13 +65,23 @@ def indexSourceFile(sourceFilePath, environmentDirectoryPath, workingDirectory, 
 
 	astVisitor.traverseNode(moduleNode)
 
+class ContextType(Enum):
+	FILE = 1
+	MODULE = 2
+	CLASS = 3
+	FUNCTION = 4
+	METHOD = 5
+
 
 class ContextInfo:
 
-	def __init__(self, id, name, node):
+	def __init__(self, id, contextType, name, node):
 		self.id = id
 		self.name = name
 		self.node = node
+		self.selfParamName = None
+		self.localSymbolNames = []
+		self.contextType = contextType
 
 
 class AstVisitor:
@@ -106,65 +116,86 @@ class AstVisitor:
 		if fileId == 0:
 			print('ERROR: ' + srctrl.getLastError())
 		self.client.recordFileLanguage(fileId, 'python')
-		self.contextStack.append(ContextInfo(fileId, self.sourceFilePath, None))
+		self.contextStack.append(ContextInfo(fileId, ContextType.FILE, self.sourceFilePath, None))
 
 		moduleNameHierarchy = self.getNameHierarchyFromModuleFilePath(self.sourceFilePath)
 		if moduleNameHierarchy is not None:
 			moduleId = self.client.recordSymbol(moduleNameHierarchy)
 			self.client.recordSymbolDefinitionKind(moduleId, srctrl.DEFINITION_EXPLICIT)
 			self.client.recordSymbolKind(moduleId, srctrl.SYMBOL_MODULE)
-			self.contextStack.append(ContextInfo(moduleId, moduleNameHierarchy.getDisplayString(), None))
+			self.contextStack.append(ContextInfo(moduleId, ContextType.MODULE, moduleNameHierarchy.getDisplayString(), None))
 
 
 	def traverseNode(self, node):
 		if node is None:
 			return
 
-		if node.type == 'funcdef':
-			self.traverseFuncdefNode(node)
+		if node.type == 'classdef':
+			self.traverseClassdef(node)
+		elif node.type == 'funcdef':
+			self.traverseFuncdef(node)
+		elif node.type == 'param':
+			self.traverseParam(node)
+		else:
+			if node.type == 'name':
+				self.beginVisitName(node)
+			elif node.type == 'string':
+				self.beginVisitString(node)
+			elif node.type == 'error_leaf':
+				self.beginVisitErrorLeaf(node)
+
+			if hasattr(node, 'children'):
+				for c in node.children:
+					self.traverseNode(c)
+
+			if node.type == 'name':
+				self.endVisitName(node)
+			elif node.type == 'string':
+				self.endVisitString(node)
+			elif node.type == 'error_leaf':
+				self.endVisitErrorLeaf(node)
+
+#----------------
+
+	def traverseClassdef(self, node):
+		if node is None:
 			return
 
-		if node.type == 'classdef':
-			self.beginVisitClassdef(node)
-		elif node.type == 'name':
-			self.beginVisitName(node)
-		elif node.type == 'string':
-			self.beginVisitString(node)
-		elif node.type == 'error_leaf':
-			self.beginVisitErrorLeaf(node)
+		self.beginVisitClassdef(node)
+		#get_super_arglist()
 
-		if hasattr(node, 'children'):
-			for c in node.children:
-				self.traverseNode(c)
+		self.traverseNode(node.get_suite())
 
-		if node.type == 'classdef':
-			self.endVisitClassdef(node)
-		elif node.type == 'name':
-			self.endVisitName(node)
-		elif node.type == 'string':
-			self.endVisitString(node)
-		elif node.type == 'error_leaf':
-			self.endVisitErrorLeaf(node)
+		self.endVisitClassdef(node)
 
 
-	def traverseFuncdefNode(self, node):
+	def traverseFuncdef(self, node):
 		if node is None:
 			return
 
 		self.beginVisitFuncdef(node)
 
-		childTypes = ['pre_params', 'params', 'post_params']
-
-		if hasattr(node, 'children'):
-			for c in node.children:
-
-				self.traverseNode(c)
+		for n in node.get_params():
+			self.traverseNode(n)
+		self.traverseNode(node.get_suite())
 
 		self.endVisitFuncdef(node)
 
 
+	def traverseParam(self, node):
+		if node is None:
+			return
+
+		self.beginVisitParam(node)
+
+		self.traverseNode(node.default)
+
+		self.endVisitParam(node)
+
+#----------------
+
 	def beginVisitClassdef(self, node):
-		nameNode = getFirstDirectChildWithType(node, 'name')
+		nameNode = node.name
 
 		symbolNameHierarchy = self.getNameHierarchyOfNode(nameNode)
 		if symbolNameHierarchy is None:
@@ -175,7 +206,7 @@ class AstVisitor:
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_CLASS)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
 		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
-		self.contextStack.append(ContextInfo(symbolId, symbolNameHierarchy.getDisplayString(), node))
+		self.contextStack.append(ContextInfo(symbolId, ContextType.CLASS, symbolNameHierarchy.getDisplayString(), node))
 
 
 	def endVisitClassdef(self, node):
@@ -186,21 +217,49 @@ class AstVisitor:
 
 
 	def beginVisitFuncdef(self, node):
-		nameNode = getFirstDirectChildWithType(node, 'name')
+		nameNode = node.name
 
 		symbolNameHierarchy = self.getNameHierarchyOfNode(nameNode)
 		if symbolNameHierarchy is None:
 			symbolNameHierarchy = getNameHierarchyForUnsolvedSymbol()
+
+		selfParamName = None
+		localSymbolNames = []
+
+		contextType = ContextType.FUNCTION
+		if self.contextStack[-1].contextType == ContextType.CLASS:
+			contextType = ContextType.METHOD
+
+		for param in node.get_params():
+			if contextType == ContextType.METHOD and selfParamName is None:
+				selfParamName = param.name.value
+			localSymbolNames.append(param.name.value)
 
 		symbolId = self.client.recordSymbol(symbolNameHierarchy)
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
 		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
-		self.contextStack.append(ContextInfo(symbolId, symbolNameHierarchy.getDisplayString(), node))
+		contextInfo = ContextInfo(symbolId, contextType, symbolNameHierarchy.getDisplayString(), node)
+		contextInfo.selfParamName = selfParamName
+		contextInfo.localSymbolNames.extend(localSymbolNames)
+		self.contextStack.append(contextInfo)
 
 
 	def endVisitFuncdef(self, node):
+		if len(self.contextStack) > 0:
+			contextNode = self.contextStack[-1].node
+			if node == contextNode:
+				self.contextStack.pop()
+
+
+	def beginVisitParam(self, node):
+		nameNode = node.name
+		localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(nameNode))
+		self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(nameNode))
+
+
+	def endVisitParam(self, node):
 		if len(self.contextStack) > 0:
 			contextNode = self.contextStack[-1].node
 			if node == contextNode:
@@ -214,10 +273,46 @@ class AstVisitor:
 		if node.value in ['True', 'False', 'None']: # these are not parsed as "keywords" in Python 2
 			return
 
-		if node.parent is not None and node.parent.type in ['classdef', 'funcdef']:
-			pass
-		else:
-			self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
+		if node.is_definition():
+			namedDefinitionParentNode = getParentWithTypeInList(node, ['classdef', 'funcdef'])
+			if namedDefinitionParentNode is not None:
+				if namedDefinitionParentNode.type in ['classdef']:
+					if getNamedParentNode(node) == namedDefinitionParentNode:
+						# definition is not local to some other field instantiation but instead it is a static member variable
+						# node is the definition of the static member variable
+						symbolNameHierarchy = self.getNameHierarchyOfNode(node)
+						if symbolNameHierarchy is not None:
+							symbolId = self.client.recordSymbol(symbolNameHierarchy)
+							self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
+							self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
+							self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(node))
+							return
+				elif namedDefinitionParentNode.type in ['funcdef']:
+					# definition may be a non-static member variable
+					if node.parent is not None and node.parent.type == 'trailer':
+						potentialSelfParamNode = getNamedParentNode(node)
+						if potentialSelfParamNode is not None and getFirstDirectChildWithType(potentialSelfParamNode, 'name').value == self.contextStack[-1].selfParamName:
+							# definition is a non-static member variable
+							symbolNameHierarchy = self.getNameHierarchyOfNode(node)
+							if symbolNameHierarchy is not None:
+								symbolId = self.client.recordSymbol(symbolNameHierarchy)
+								self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
+								self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
+								self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(node))
+								return
+					localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
+					self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
+					return
+			else:
+				symbolNameHierarchy = self.getNameHierarchyOfNode(node)
+				if symbolNameHierarchy is not None:
+					symbolId = self.client.recordSymbol(symbolNameHierarchy)
+					self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_GLOBAL_VARIABLE)
+					self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
+					self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(node))
+					return
+
+		self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
 
 
 	def endVisitName(self, node):
@@ -250,29 +345,10 @@ class AstVisitor:
 			if node == contextNode:
 				self.contextStack.pop()
 
+#----------------
 
-	def getLocalSymbolName(self, definition):
-		definitionNameNode = definition._name.tree_name
-
-		definitionModulePath = definition.module_path
-		if definitionModulePath is None:
-			if self.sourceFilePath == _virtualFilePath:
-				definitionModulePath = self.sourceFilePath
-
-		contextName = ''
-		if definitionModulePath is not None:
-			parentFuncdef = getParentWithType(definitionNameNode, 'funcdef')
-			if parentFuncdef is not None:
-				parentFuncdefNameNode = getFirstDirectChildWithType(parentFuncdef, 'name')
-				if parentFuncdefNameNode is not None:
-					parentFuncdefNameHierarchy = self.getNameHierarchyOfNode(parentFuncdefNameNode)
-					if parentFuncdefNameHierarchy is not None:
-						contextName = parentFuncdefNameHierarchy.getDisplayString()
-
-		if len(contextName) == 0:
-			contextName = str(self.contextStack[-1].name)
-
-		return contextName + '<' + definitionNameNode.value + '>'
+	def getLocalSymbolName(self, nameNode):
+		return str(self.contextStack[-1].name) + '<' + nameNode.value + '>'
 
 
 	def getNameHierarchyFromModuleFilePath(self, filePath):
@@ -328,6 +404,14 @@ class AstVisitor:
 			return None
 
 		parentNode = getParentWithTypeInList(nameNode.parent, ['classdef', 'funcdef'])
+
+		if self.contextStack[-1].contextType == ContextType.METHOD:
+			potentialSelfNode = getNamedParentNode(node)
+			if potentialSelfNode is not None:
+				potentialSelfNameNode = getFirstDirectChildWithType(potentialSelfNode, 'name')
+				if potentialSelfNameNode is not None and potentialSelfNameNode.value == self.contextStack[-1].selfParamName:
+					parentNode = self.contextStack[-2].node
+
 		nameElement = NameElement(nameNode.value)
 
 		if parentNode is not None:
@@ -355,6 +439,9 @@ class VerboseAstVisitor(AstVisitor):
 
 
 	def traverseNode(self, node):
+		if node is None:
+			return
+
 		currentString = ''
 		for i in range(0, self.indentationLevel):
 			currentString += self.indentationToken
