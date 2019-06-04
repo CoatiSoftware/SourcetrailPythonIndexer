@@ -99,6 +99,14 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.foo<bar> at [2:6|2:8]' in client.localSymbols)
 
 
+	def test_indexer_records_usage_of_function_parameter_following_an_open_brace_as_local_symbol(self):
+		client = self.indexSourceCode(
+			'def foo(first):\n'
+			'	foo(first)\n'
+		)
+		self.assertTrue('virtual_file.foo<first> at [2:6|2:10]' in client.localSymbols)
+
+
 	def test_indexer_records_function_scope_variable_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'def foo():\n'

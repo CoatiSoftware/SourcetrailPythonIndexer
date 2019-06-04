@@ -313,7 +313,13 @@ class AstVisitor:
 					self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(node))
 					return
 		else: # if not node.is_definition():
-			if node.parent is not None and node.parent.type != 'trailer':
+			recordLocalSymbolUsage = True
+
+			if node.parent is not None and node.parent.type == 'trailer':
+				if node.get_previous_sibling() is not None and node.get_previous_sibling().value == '.':
+					recordLocalSymbolUsage = False
+
+			if recordLocalSymbolUsage:
 				if node.value in self.contextStack[-1].localSymbolNames:
 					localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
 					self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
