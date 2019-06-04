@@ -135,6 +135,19 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording References
 
+	def test_indexer_records_usage_for_access_of_other_class_field(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	value = 0\n'
+			'\n'
+			'class Bar:\n'
+			'	def baz(self):\n'
+			'		foo = Foo()\n'
+			'		foo.value = -10000\n'
+		)
+		self.assertTrue('USAGE: virtual_file.Bar.baz -> unsolved symbol at [7:7|7:11]' in client.references)
+
+
 	def test_indexer_records_single_class_inheritence(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'

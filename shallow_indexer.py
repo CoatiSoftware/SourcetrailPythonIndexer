@@ -328,6 +328,10 @@ class AstVisitor:
 								self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 								self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(node))
 								return
+						else:
+							# despite "node.is_definition()" says so, this is just a re-definition of an other class' member
+							self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
+							return
 					localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
 					self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
 					self.contextStack[-1].localSymbolNames.append(node.value)
