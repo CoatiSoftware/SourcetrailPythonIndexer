@@ -10,14 +10,14 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording Symbols
 
-	def test_indexer_records_module_for_source_file(self): #FixmeInShallowMode
+	def test_indexer_records_module_for_source_file(self):
 		client = self.indexSourceCode(
 			'\n'
 		)
 		self.assertTrue('MODULE: virtual_file' in client.symbols)
 
 
-	def test_indexer_records_module_scope_variable_as_global_variable(self): #FixmeInShallowMode
+	def test_indexer_records_module_scope_variable_as_global_variable(self):
 		client = self.indexSourceCode(
 			'foo = 9:\n'
 		)
@@ -83,7 +83,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.foo<baz> at [6:9|6:11]' in client.localSymbols)
 
 
-	def test_indexer_records_function_parameter_as_local_symbol(self): #FixmeInShallowMode
+	def test_indexer_records_function_parameter_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'def foo(bar):\n'
 			'	pass\n'
@@ -99,7 +99,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.foo<bar> at [2:6|2:8]' in client.localSymbols)
 
 
-	def test_indexer_records_function_scope_variable_as_local_symbol(self): #FixmeInShallowMode
+	def test_indexer_records_function_scope_variable_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'def foo():\n'
 			'	x = 5\n'
@@ -116,7 +116,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.foo<x> at [3:6|3:6]' in client.localSymbols)
 
 
-	def test_indexer_records_method_scope_variable_as_local_symbol(self): #FixmeInShallowMode
+	def test_indexer_records_method_scope_variable_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def bar(self):\n'

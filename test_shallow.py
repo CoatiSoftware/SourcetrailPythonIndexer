@@ -10,6 +10,19 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording Symbols
 
+	def test_indexer_records_module_for_source_file(self):
+		client = self.indexSourceCode(
+			'\n'
+		)
+		self.assertTrue('MODULE: virtual_file' in client.symbols)
+
+
+	def test_indexer_records_module_scope_variable_as_global_variable(self):
+		client = self.indexSourceCode(
+			'foo = 9:\n'
+		)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.foo at [1:1|1:3]' in client.symbols)
+
 
 	def test_indexer_records_function_definition(self):
 		client = self.indexSourceCode(
@@ -52,6 +65,32 @@ class TestPythonIndexer(unittest.TestCase):
 		)
 		self.assertTrue('FIELD: virtual_file.Foo.x at [3:8|3:8]' in client.symbols)
 
+
+# Test Recording Local Symbols
+
+	def test_indexer_records_function_parameter_as_local_symbol(self):
+		client = self.indexSourceCode(
+			'def foo(bar):\n'
+			'	pass\n'
+		)
+		self.assertTrue('virtual_file.foo<bar> at [1:9|1:11]' in client.localSymbols)
+
+
+	def test_indexer_records_function_scope_variable_as_local_symbol(self):
+		client = self.indexSourceCode(
+			'def foo():\n'
+			'	x = 5\n'
+		)
+		self.assertTrue('virtual_file.foo<x> at [2:2|2:2]' in client.localSymbols)
+
+
+	def test_indexer_records_method_scope_variable_as_local_symbol(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def bar(self):\n'
+			'		baz = 6\n'
+		)
+		self.assertTrue('virtual_file.Foo.bar<baz> at [3:3|3:5]' in client.localSymbols)
 
 
 # Test Atomic Ranges
