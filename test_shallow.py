@@ -46,7 +46,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'	def bar(self):\n'
 			'		pass\n'
 		)
-		self.assertTrue('FUNCTION: virtual_file.Foo.bar at [2:6|2:8] with scope [2:2|4:0]' in client.symbols)
+		self.assertTrue('METHOD: virtual_file.Foo.bar at [2:6|2:8] with scope [2:2|4:0]' in client.symbols)
 
 
 	def test_indexer_records_static_field_definition(self):

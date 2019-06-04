@@ -227,8 +227,10 @@ class AstVisitor:
 		localSymbolNames = []
 
 		contextType = ContextType.FUNCTION
+		symbolKind = srctrl.SYMBOL_FUNCTION
 		if self.contextStack[-1].contextType == ContextType.CLASS:
 			contextType = ContextType.METHOD
+			symbolKind = srctrl.SYMBOL_METHOD
 
 		for param in node.get_params():
 			if contextType == ContextType.METHOD and selfParamName is None:
@@ -237,7 +239,7 @@ class AstVisitor:
 
 		symbolId = self.client.recordSymbol(symbolNameHierarchy)
 		self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
-		self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FUNCTION)
+		self.client.recordSymbolKind(symbolId, symbolKind)
 		self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(nameNode))
 		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
 		contextInfo = ContextInfo(symbolId, contextType, symbolNameHierarchy.getDisplayString(), node)
@@ -289,7 +291,7 @@ class AstVisitor:
 							return
 				elif namedDefinitionParentNode.type in ['funcdef']:
 					# definition may be a non-static member variable
-					if node.parent is not None and node.parent.type == 'trailer':
+					if node.parent is not None and node.parent.type == 'trailer' and node.get_previous_sibling() is not None and node.get_previous_sibling().value == '.':
 						potentialSelfParamNode = getNamedParentNode(node)
 						if potentialSelfParamNode is not None and getFirstDirectChildWithType(potentialSelfParamNode, 'name').value == self.contextStack[-1].selfParamName:
 							# definition is a non-static member variable
@@ -315,9 +317,8 @@ class AstVisitor:
 		else: # if not node.is_definition():
 			recordLocalSymbolUsage = True
 
-			if node.parent is not None and node.parent.type == 'trailer':
-				if node.get_previous_sibling() is not None and node.get_previous_sibling().value == '.':
-					recordLocalSymbolUsage = False
+			if node.parent is not None and node.parent.type == 'trailer' and node.get_previous_sibling() is not None and node.get_previous_sibling().value == '.':
+				recordLocalSymbolUsage = False
 
 			if recordLocalSymbolUsage:
 				if node.value in self.contextStack[-1].localSymbolNames:
