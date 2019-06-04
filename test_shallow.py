@@ -133,6 +133,31 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.Foo.bar<baz> at [3:3|3:5]' in client.localSymbols)
 
 
+# Test Recording References
+
+	def test_indexer_records_single_class_inheritence(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	pass\n'
+			'class Bar(Foo):\n'
+			'	pass\n'
+		)
+		self.assertTrue('INHERITANCE: virtual_file.Bar -> unsolved symbol at [3:11|3:13]' in client.references)
+
+
+	def test_indexer_records_multiple_class_inheritence(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	pass\n'
+			'class Bar():\n'
+			'	pass\n'
+			'class Baz(Foo, Bar):\n'
+			'	pass\n'
+		)
+		self.assertTrue('INHERITANCE: virtual_file.Baz -> unsolved symbol at [5:11|5:13]' in client.references)
+		self.assertTrue('INHERITANCE: virtual_file.Baz -> unsolved symbol at [5:16|5:18]' in client.references)
+
+
 # Test Atomic Ranges
 
 	def test_indexer_records_atomic_range_for_multi_line_string(self):

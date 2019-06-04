@@ -84,6 +84,12 @@ class ContextInfo:
 		self.contextType = contextType
 
 
+class ReferenceKindInfo:
+
+	def __init__(self, kind, node):
+		self.kind = kind
+		self.node = node
+
 class AstVisitor:
 
 	def __init__(self, client, sourceFilePath, sourceFileContent = None, sysPath = None):
@@ -111,6 +117,7 @@ class AstVisitor:
 		self.sysPath = list(filter(None, self.sysPath))
 
 		self.contextStack = []
+		self.referenceKindStack = []
 
 		fileId = self.client.recordFile(self.sourceFilePath)
 		if fileId == 0:
@@ -162,8 +169,12 @@ class AstVisitor:
 			return
 
 		self.beginVisitClassdef(node)
-		#get_super_arglist()
 
+		superArglist = node.get_super_arglist()
+		if superArglist is not None:
+			self.beginVisitClassdefSuperArglist(superArglist)
+			self.traverseNode(superArglist)
+			self.endVisitClassdefSuperArglist(superArglist)
 		self.traverseNode(node.get_suite())
 
 		self.endVisitClassdef(node)
@@ -214,6 +225,17 @@ class AstVisitor:
 			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
+
+
+	def beginVisitClassdefSuperArglist(self, node):
+		self.referenceKindStack.append(ReferenceKindInfo(srctrl.REFERENCE_INHERITANCE, node))
+
+
+	def endVisitClassdefSuperArglist(self, node):
+		if len(self.referenceKindStack) > 0:
+			referenceKindNode = self.referenceKindStack[-1].node
+			if node == referenceKindNode:
+				self.referenceKindStack.pop()
 
 
 	def beginVisitFuncdef(self, node):
@@ -273,6 +295,10 @@ class AstVisitor:
 			return
 
 		if node.value in ['True', 'False', 'None']: # these are not parsed as "keywords" in Python 2
+			return
+
+		if len(self.referenceKindStack) > 0 and self.referenceKindStack[-1] is not None and self.referenceKindStack[-1].kind == srctrl.REFERENCE_INHERITANCE:
+			self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_INHERITANCE, getSourceRangeOfNode(node))
 			return
 
 		if node.is_definition():

@@ -259,7 +259,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('USAGE: virtual_file -> sys at [2:5|2:7]' in client.references)
 
 
-	def test_indexer_records_single_class_inheritence(self): #FixmeInShallowMode
+	def test_indexer_records_single_class_inheritence(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	pass\n'
@@ -269,7 +269,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('INHERITANCE: virtual_file.Bar -> virtual_file.Foo at [3:11|3:13]' in client.references)
 
 
-	def test_indexer_records_multiple_class_inheritence(self): #FixmeInShallowMode
+	def test_indexer_records_multiple_class_inheritence(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	pass\n'
