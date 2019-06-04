@@ -302,6 +302,7 @@ class AstVisitor:
 								return
 					localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
 					self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
+					self.contextStack[-1].localSymbolNames.append(node.value)
 					return
 			else:
 				symbolNameHierarchy = self.getNameHierarchyOfNode(node)

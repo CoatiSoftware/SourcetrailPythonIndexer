@@ -68,6 +68,21 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording Local Symbols
 
+	def test_indexer_records_usage_of_variable_with_multiple_definitions_as_single_local_symbols(self):
+		client = self.indexSourceCode(
+			'def foo(bar):\n'
+			'	if bar:\n'
+			'		baz = 9\n'
+			'	else:\n'
+			'		baz = 3\n'
+			'	return baz\n'
+			'foo(True)\n'
+			'foo(False)\n'
+		)
+		self.assertTrue('virtual_file.foo<baz> at [6:9|6:11]' in client.localSymbols)
+		self.assertTrue('virtual_file.foo<baz> at [6:9|6:11]' in client.localSymbols)
+
+
 	def test_indexer_records_function_parameter_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'def foo(bar):\n'
@@ -90,6 +105,15 @@ class TestPythonIndexer(unittest.TestCase):
 			'	x = 5\n'
 		)
 		self.assertTrue('virtual_file.foo<x> at [2:2|2:2]' in client.localSymbols)
+
+
+	def test_indexer_records_usage_of_function_scope_variable_as_local_symbol(self):
+		client = self.indexSourceCode(
+			'def foo():\n'
+			'	x = 5\n'
+			'	y = x\n'
+		)
+		self.assertTrue('virtual_file.foo<x> at [3:6|3:6]' in client.localSymbols)
 
 
 	def test_indexer_records_method_scope_variable_as_local_symbol(self):

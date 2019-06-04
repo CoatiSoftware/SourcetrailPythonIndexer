@@ -68,7 +68,7 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording Local Symbols
 
-	def test_indexer_records_usage_of_variable_with_multiple_definitions_as_single_local_symbols(self): #FixmeInShallowMode
+	def test_indexer_records_usage_of_variable_with_multiple_definitions_as_single_local_symbols(self):
 		client = self.indexSourceCode(
 			'def foo(bar):\n'
 			'	if bar:\n'
@@ -107,7 +107,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.foo<x> at [2:2|2:2]' in client.localSymbols)
 
 
-	def test_indexer_records_usage_of_function_scope_variable_as_local_symbol(self): #FixmeInShallowMode
+	def test_indexer_records_usage_of_function_scope_variable_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'def foo():\n'
 			'	x = 5\n'
