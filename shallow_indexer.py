@@ -311,7 +311,14 @@ class AstVisitor:
 					self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
 					self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(node))
 					return
+		else: # if not node.is_definition():
+			if node.parent is not None and node.parent.type != 'trailer':
+				if node.value in self.contextStack[-1].localSymbolNames:
+					localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
+					self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
+					return
 
+		# fallback if not returned before
 		self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
 
 

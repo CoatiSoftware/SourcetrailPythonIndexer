@@ -91,7 +91,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.foo<bar> at [1:9|1:11]' in client.localSymbols)
 
 
-	def test_indexer_records_usage_of_function_parameter_as_local_symbol(self): #FixmeInShallowMode
+	def test_indexer_records_usage_of_function_parameter_as_local_symbol(self):
 		client = self.indexSourceCode(
 			'def foo(bar):\n'
 			'	x = bar\n'
