@@ -576,6 +576,25 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue(indexer.isSourcetrailDBVersionCompatible())
 
 
+	def test_issue_26_1(self): # For-Loop-Iterator not recorded as local symbol
+		client = self.indexSourceCode(
+			'def foo():\n'
+			'	for n in [1, 2, 3]:\n'
+			'		print(n)\n'
+		)
+		self.assertTrue('virtual_file.foo<n> at [2:6|2:6]' in client.localSymbols)
+		self.assertTrue('virtual_file.foo<n> at [3:9|3:9]' in client.localSymbols)
+
+
+	def test_issue_26_2(self): # For-Loop-Iterator not recorded as global symbol
+		client = self.indexSourceCode(
+			'for n in [1, 2, 3]:\n'
+			'	print(n)\n'
+		)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.n at [1:5|1:5]' in client.symbols)
+		self.assertTrue('USAGE: virtual_file -> virtual_file.n at [2:8|2:8]' in client.references)
+
+
 	def test_issue_27(self): # Boolean value "True" is recorded as "non-indexed global variable"
 		client = self.indexSourceCode(
 			'class Test():\n'
