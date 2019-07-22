@@ -604,6 +604,15 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertEqual(len(client.references), 0)
 
 
+	def test_issue_28(self): # Default argument of function is "unsolved" if it has the same name as the function
+		client = self.indexSourceCode(
+			'foo = 9\n'
+			'def foo(baz=foo):\n'
+			'	pass\n'
+		)
+		self.assertTrue('USAGE: virtual_file.foo -> virtual_file.foo at [2:13|2:15]' in client.references)
+
+
 	def test_issue_29(self): # Local symbol not solved correctly if defined in parent scope function
 		client = self.indexSourceCode(
 			'class Foo:\n'
