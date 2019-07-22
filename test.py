@@ -624,6 +624,25 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.Foo.__init__<self> at [4:4|4:7]' in client.localSymbols)
 
 
+	def test_issue_30(self): # Unable to solve method calls for multiple inheritence if "super()" is used
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def foo(self):\n'
+			'		pass\n'
+			'\n'
+			'class Bar:\n'
+			'	def bar(self):\n'
+			'		pass\n'
+			'\n'
+			'class Baz(Foo, Bar):\n'
+			'	def baz(self):\n'
+			'		super().foo()\n'
+			'		super().bar()\n'
+		)
+		self.assertTrue('CALL: virtual_file.Baz.baz -> virtual_file.Foo.foo at [11:11|11:13]' in client.references)
+		self.assertTrue('CALL: virtual_file.Baz.baz -> virtual_file.Bar.bar at [12:11|12:13]' in client.references)
+
+
 	def test_issue_34(self): # Context of method that is defined inside a for loop is not solved correctly
 		client = self.indexSourceCode(
 			'def foo():\n'
