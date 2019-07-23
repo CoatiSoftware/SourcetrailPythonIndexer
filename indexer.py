@@ -698,6 +698,9 @@ class AstVisitor:
 
 					if split[-1] == '__init__':
 						split = split[:-1]
+					if split[-1] == '__builtin__':
+						split = split[:-1]
+						split.insert(0, 'builtins')
 
 					nameHierarchy = None
 					for namePart in split:
@@ -732,7 +735,7 @@ class AstVisitor:
 		if definition is None:
 			return None
 
-		if definition.line is None and definition.column is None: # TODO: test if this is required after updating to jedi 14.1
+		if definition.line is None and definition.column is None:
 			if definition.module_name in ['builtins', '__builtin__']:
 				nameHierarchy = NameHierarchy(NameElement('builtins'), '.')
 				for namePart in definition.full_name.split('.'):
