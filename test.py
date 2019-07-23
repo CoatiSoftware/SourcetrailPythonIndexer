@@ -297,7 +297,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'import itertools\n'
 			'itertools.cycle(None)\n'
 		)
-		self.assertTrue('TYPE_USAGE: virtual_file -> itertools.cycle at [2:11|2:15]' in client.references)
+		self.assertTrue('CALL: virtual_file -> itertools.cycle at [2:11|2:15]' in client.references)
 
 
 	def test_indexer_records_usage_of_super_keyword(self):
@@ -311,30 +311,29 @@ class TestPythonIndexer(unittest.TestCase):
 			'		super().foo()\n'
 		)
 		self.assertTrue(
-			'TYPE_USAGE: virtual_file.Bar.bar -> builtin.super at [7:3|7:7]' in client.references or
-			'CALL: virtual_file.Bar.bar -> builtin.super at [7:3|7:7]' in client.references) # somehow the CI records a "call" reference. maybe that's a python 2 thing...
+			'TYPE_USAGE: virtual_file.Bar.bar -> builtins.super at [7:3|7:7]' in client.references or
+			'CALL: virtual_file.Bar.bar -> builtins.super at [7:3|7:7]' in client.references) # somehow the CI records a "call" reference. maybe that's a python 2 thing...
 
 
 	def test_indexer_records_usage_of_builtin_class(self):
 		client = self.indexSourceCode(
 			'foo = str(b"bar")\n'
 		)
-		self.assertTrue('TYPE_USAGE: virtual_file -> builtin.str at [1:7|1:9]' in client.references)
+		self.assertTrue('TYPE_USAGE: virtual_file -> builtins.str at [1:7|1:9]' in client.references)
 
 
 	def test_indexer_records_call_to_builtin_function(self):
 		client = self.indexSourceCode(
 			'foo = "test string".islower()\n'
 		)
-		self.assertTrue('CALL: virtual_file -> builtin.str.islower at [1:21|1:27]' in client.references)
+		self.assertTrue('CALL: virtual_file -> builtins.str.islower at [1:21|1:27]' in client.references)
 
-
-	def test_indexer_records_call_to_environment_function(self):
-		client = self.indexSourceCode(
-			'import sys\n'
-			'sys.callstats()\n'
-		)
-		self.assertTrue('CALL: virtual_file -> sys.callstats at [2:5|2:13]' in client.references)
+#	def test_indexer_records_call_to_environment_function(self):
+#		client = self.indexSourceCode(
+#			'import sys\n'
+#			'sys.callstats()\n'
+#		)
+#		self.assertTrue('CALL: virtual_file -> sys.callstats at [2:5|2:13]' in client.references)
 
 
 	def test_indexer_records_function_call(self):
@@ -380,6 +379,7 @@ class TestPythonIndexer(unittest.TestCase):
 	def test_indexer_records_module_as_qualifier_in_import_statement(self):
 		client = self.indexSourceCode(
 			'import pkg.mod\n',
+			None,
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertTrue('pkg at [1:8|1:10]' in client.qualifiers)
@@ -408,6 +408,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'import pkg\n'
 			'c = pkg.PackageLevelClass()\n'
 			'print(c.field)\n',
+			None,
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertTrue('NON-INDEXED MODULE: pkg' in client.symbols)
@@ -420,6 +421,7 @@ class TestPythonIndexer(unittest.TestCase):
 			'import pkg.mod\n'
 			'c = pkg.mod.ModuleLevelClass()\n'
 			'print(c.field)\n',
+			None,
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertTrue('NON-INDEXED MODULE: pkg.mod' in client.symbols)
@@ -466,6 +468,7 @@ class TestPythonIndexer(unittest.TestCase):
 	def test_indexer_records_error_if_imported_module_has_not_been_found(self):
 		client = self.indexSourceCode(
 			'import pkg.this_is_not_a_real_module\n',
+			None,
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertTrue('ERROR: "Imported symbol named "this_is_not_a_real_module" has not been found." at [1:12|1:36]' in client.errors)
@@ -474,6 +477,7 @@ class TestPythonIndexer(unittest.TestCase):
 	def test_indexer_records_error_for_each_unsolved_import_in_single_import_statement(self):
 		client = self.indexSourceCode(
 			'import this_is_not_a_real_package, this_is_not_a_real_package.this_is_not_a_real_module, pkg.this_is_not_a_real_module\n',
+			None,
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertEqual(len(client.errors), 3)
@@ -501,6 +505,7 @@ class TestPythonIndexer(unittest.TestCase):
 	def test_indexer_records_error_if_imported_aliased_module_has_not_been_found(self):
 		client = self.indexSourceCode(
 			'import pkg.this_is_not_a_real_module as mod\n',
+			None,
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertEqual(len(client.errors), 1)
@@ -510,6 +515,7 @@ class TestPythonIndexer(unittest.TestCase):
 	def test_indexer_records_error_for_each_unsolved_aliased_import_in_single_import_statement(self):
 		client = self.indexSourceCode(
 			'import this_is_not_a_real_package as p, this_is_not_a_real_package.this_is_not_a_real_module as mod1, pkg.this_is_not_a_real_module as mod2\n',
+			None,
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertEqual(len(client.errors), 3)
@@ -537,6 +543,7 @@ class TestPythonIndexer(unittest.TestCase):
 	def test_indexer_records_error_if_module_of_imported_aliased_symbol_has_not_been_found(self):
 		client = self.indexSourceCode(
 			'from pkg.this_is_not_a_real_module import this_is_not_a_real_symbol as sym\n',
+			None,
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertEqual(len(client.errors), 1)
@@ -546,6 +553,7 @@ class TestPythonIndexer(unittest.TestCase):
 	def test_indexer_records_error_if_imported_aliased_symbol_has_not_been_found(self):
 		client = self.indexSourceCode(
 			'from pkg import this_is_not_a_real_symbol_1 as sym1, this_is_not_a_real_symbol_2 as sym2\n',
+			None,
 			[os.path.join(os.getcwd(), 'data', 'test')]
 		)
 		self.assertEqual(len(client.errors), 2)
@@ -568,6 +576,25 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue(indexer.isSourcetrailDBVersionCompatible())
 
 
+	def test_issue_26_1(self): # For-Loop-Iterator not recorded as local symbol
+		client = self.indexSourceCode(
+			'def foo():\n'
+			'	for n in [1, 2, 3]:\n'
+			'		print(n)\n'
+		)
+		self.assertTrue('virtual_file.foo<n> at [2:6|2:6]' in client.localSymbols)
+		self.assertTrue('virtual_file.foo<n> at [3:9|3:9]' in client.localSymbols)
+
+
+	def test_issue_26_2(self): # For-Loop-Iterator not recorded as global symbol
+		client = self.indexSourceCode(
+			'for n in [1, 2, 3]:\n'
+			'	print(n)\n'
+		)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.n at [1:5|1:5]' in client.symbols)
+		self.assertTrue('USAGE: virtual_file -> virtual_file.n at [2:8|2:8]' in client.references)
+
+
 	def test_issue_27(self): # Boolean value "True" is recorded as "non-indexed global variable"
 		client = self.indexSourceCode(
 			'class Test():\n'
@@ -575,6 +602,15 @@ class TestPythonIndexer(unittest.TestCase):
 			'		pass\n'
 		)
 		self.assertEqual(len(client.references), 0)
+
+
+	def test_issue_28(self): # Default argument of function is "unsolved" if it has the same name as the function
+		client = self.indexSourceCode(
+			'foo = 9\n'
+			'def foo(baz=foo):\n'
+			'	pass\n'
+		)
+		self.assertTrue('USAGE: virtual_file.foo -> virtual_file.foo at [2:13|2:15]' in client.references)
 
 
 	def test_issue_29(self): # Local symbol not solved correctly if defined in parent scope function
@@ -586,6 +622,25 @@ class TestPythonIndexer(unittest.TestCase):
 		)
 		self.assertTrue('virtual_file.Foo.__init__<self> at [2:15|2:18]' in client.localSymbols)
 		self.assertTrue('virtual_file.Foo.__init__<self> at [4:4|4:7]' in client.localSymbols)
+
+
+	def test_issue_30(self): # Unable to solve method calls for multiple inheritence if "super()" is used
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def foo(self):\n'
+			'		pass\n'
+			'\n'
+			'class Bar:\n'
+			'	def bar(self):\n'
+			'		pass\n'
+			'\n'
+			'class Baz(Foo, Bar):\n'
+			'	def baz(self):\n'
+			'		super().foo()\n'
+			'		super().bar()\n'
+		)
+		self.assertTrue('CALL: virtual_file.Baz.baz -> virtual_file.Foo.foo at [11:11|11:13]' in client.references)
+		self.assertTrue('CALL: virtual_file.Baz.baz -> virtual_file.Bar.bar at [12:11|12:13]' in client.references)
 
 
 	def test_issue_34(self): # Context of method that is defined inside a for loop is not solved correctly
@@ -637,7 +692,7 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Utility Functions
 
-	def indexSourceCode(self, sourceCode, sysPath = None, verbose = False):
+	def indexSourceCode(self, sourceCode, environmentPath = None, sysPath = None, verbose = False):
 		workingDirectory = os.getcwd()
 		astVisitorClient = TestAstVisitorClient()
 
@@ -646,6 +701,7 @@ class TestPythonIndexer(unittest.TestCase):
 			workingDirectory,
 			astVisitorClient,
 			verbose,
+			environmentPath,
 			sysPath
 		)
 

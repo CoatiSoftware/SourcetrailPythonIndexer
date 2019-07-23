@@ -72,10 +72,10 @@ def isSourcetrailDBVersionCompatible(allowLogging = False):
 	return True
 
 
-def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, sysPath = None):
+def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, environmentPath = None, sysPath = None):
 	sourceFilePath = _virtualFilePath
 
-	environment = getEnvironment()
+	environment = getEnvironment(environmentPath)
 
 	project = jedi.api.project.Project(workingDirectory, environment = environment)
 
@@ -167,7 +167,7 @@ class AstVisitor:
 		if sysPath is not None:
 			self.sysPath.extend(sysPath)
 		else:
-			baseSysPath = evaluator.project._get_base_sys_path(self.environment)
+			baseSysPath = evaluator.environment.get_sys_path()
 			baseSysPath.sort(reverse=True)
 			self.sysPath.extend(baseSysPath)
 		self.sysPath = list(filter(None, self.sysPath))
@@ -662,13 +662,29 @@ class AstVisitor:
 			return NameHierarchy(NameElement(os.path.splitext(_virtualFilePath)[0]), '.')
 
 		filePath = os.path.abspath(filePath)
-		# First remove the suffix.
-		for suffix in all_suffixes():
-			if filePath.endswith(suffix):
-				filePath = filePath[:-len(suffix)]
-				break
+		filePath = os.path.splitext(filePath)[0]
 
-		for p in self.sysPath:
+		sysPath = []
+
+		jediPath = os.path.dirname(jedi.__file__)
+		major = self.environment.version_info.major
+		minor = self.environment.version_info.minor
+		if major == 2:
+			sysPath.append(os.path.abspath(jediPath + '/third_party/typeshed/stdlib/2'))
+		if major == 2 or major == 3:
+			sysPath.append(os.path.abspath(jediPath + '/third_party/typeshed/stdlib/2and3'))
+		if major == 3:
+			sysPath.append(os.path.abspath(jediPath + '/third_party/typeshed/stdlib/3'))
+			if minor == 5:
+				sysPath.append(os.path.abspath(jediPath + '/third_party/typeshed/stdlib/3.5'))
+			if minor == 6:
+				sysPath.append(os.path.abspath(jediPath + '/third_party/typeshed/stdlib/3.6'))
+			if minor == 7:
+				sysPath.append(os.path.abspath(jediPath + '/third_party/typeshed/stdlib/3.7'))
+
+		sysPath.extend(self.sysPath)
+
+		for p in sysPath:
 			if filePath.startswith(p):
 				rest = filePath[len(p):]
 				if rest.startswith(os.path.sep):
@@ -682,6 +698,9 @@ class AstVisitor:
 
 					if split[-1] == '__init__':
 						split = split[:-1]
+					if split[-1] == '__builtin__':
+						split = split[:-1]
+						split.insert(0, 'builtins')
 
 					nameHierarchy = None
 					for namePart in split:
@@ -718,7 +737,7 @@ class AstVisitor:
 
 		if definition.line is None and definition.column is None:
 			if definition.module_name in ['builtins', '__builtin__']:
-				nameHierarchy = NameHierarchy(NameElement('builtin'), '.')
+				nameHierarchy = NameHierarchy(NameElement('builtins'), '.')
 				for namePart in definition.full_name.split('.'):
 					nameHierarchy.nameElements.append(NameElement(namePart))
 				return nameHierarchy

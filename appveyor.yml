@@ -32,8 +32,8 @@ install:
     - SET PIP_PATH=%PYTHON_PATH%/Scripts
     - SET PATH=%PYTHON_PATH%;%PIP_PATH%;%PATH%
     # install python dependencies
-    - cmd: pip install parso==0.3.4
-    - cmd: pip install jedi==0.13.3
+    - cmd: pip install parso==0.5.1
+    - cmd: pip install jedi==0.14.1
     - cmd: pip install pyinstaller
     # prepare for SourcetrailDB build
     - ps: $env:SOURCETRAIL_DB_VERSION = python -c "from _version import _sourcetrail_db_version; print(_sourcetrail_db_version)"
