@@ -1,3 +1,4 @@
+import codecs
 import jedi
 import json
 import os
@@ -106,7 +107,7 @@ def indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisito
 		print('INFO: Indexing source file "' + sourceFilePath + '".')
 
 	sourceCode = ''
-	with open(sourceFilePath, 'r', encoding='utf-8') as input:
+	with codecs.open(sourceFilePath, 'r', encoding='utf-8') as input:
 		sourceCode=input.read()
 
 	environment = getEnvironment(environmentPath)
@@ -344,8 +345,8 @@ class AstVisitor:
 
 					if self.recordStatementReference(node, definition):
 						referenceIsUnsolved = False
-			except Exception:
-				pass
+			except Exception as e:
+				print('ERROR: Encountered exception "' + e.__repr__() + '" while trying to solve the definition of node "' + node.value + '" at ' + getSourceRangeOfNode(node).toString() + '.')
 
 		if referenceIsUnsolved:
 			self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
