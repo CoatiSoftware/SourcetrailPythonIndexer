@@ -1,6 +1,14 @@
 # Changelog
 
 
+## v1.db24.p1
+
+**2019-08-06**
+
+* Updated to jedi 0.14.1 and parso 0.5.1 to fix issues #26, #28 and #30
+* Fixed opening and reading source files when using Python 2
+
+
 ## v1.db24.p0
 
 **2019-05-28**
