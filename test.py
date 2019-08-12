@@ -670,7 +670,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('GLOBAL_VARIABLE: virtual_file.name at [1:22|1:25]' in client.symbols)
 
 
-	def test_issue_41(self): # Indexer fails to record multiple call edges for a single call sit
+	def test_issue_41(self): # Indexer fails to record multiple call edges for a single call site
 		client = self.indexSourceCode(
 			'def foo(bar):\n'
 			'	bar.bar()\n'
@@ -688,6 +688,15 @@ class TestPythonIndexer(unittest.TestCase):
 		)
 		self.assertTrue('CALL: virtual_file.foo -> virtual_file.A.bar at [2:6|2:8]' in client.references)
 		self.assertTrue('CALL: virtual_file.foo -> virtual_file.B.bar at [2:6|2:8]' in client.references)
+
+
+	def test_issue_49(self): # Tracking __init__ constructor
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	pass\n'
+			'foo = Foo()\n'
+		)
+		self.assertTrue('CALL: virtual_file -> virtual_file.Foo.__init__ at [3:7|3:9]' in client.references)
 
 
 # Utility Functions
