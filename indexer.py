@@ -504,8 +504,20 @@ class AstVisitor:
 				referencedSymbolId,
 				referenceKind
 			)
-
 			self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(node))
+
+			if referenceKind == srctrl.REFERENCE_TYPE_USAGE and isCallNode(node):
+				constructorNameHierarchy = referencedNameHierarchy.copy()
+				constructorNameHierarchy.nameElements.append(NameElement('__init__'))
+				constructorSymbolId = self.client.recordSymbol(constructorNameHierarchy)
+				self.client.recordSymbolKind(constructorSymbolId, srctrl.SYMBOL_METHOD)
+				callReferenceId = self.client.recordReference(
+					self.contextStack[-1].id,
+					constructorSymbolId,
+					srctrl.REFERENCE_CALL
+				)
+				self.client.recordReferenceLocation(callReferenceId, getSourceRangeOfNode(node))
+
 		return True
 
 
@@ -520,10 +532,8 @@ class AstVisitor:
 		self.client.recordSymbolKind(referencedSymbolId, srctrl.SYMBOL_FUNCTION)
 
 		referenceKind = -1
-		nextNode = getNext(node)
-		if nextNode is not None and nextNode.type == 'trailer':
-			if len(nextNode.children) >= 2 and nextNode.children[0].value == '(' and nextNode.children[-1].value == ')':
-				referenceKind = srctrl.REFERENCE_CALL
+		if isCallNode(node):
+			referenceKind = srctrl.REFERENCE_CALL
 		elif getParentWithType(node, 'import_from'):
 			referenceKind = srctrl.REFERENCE_IMPORT
 
@@ -1064,6 +1074,12 @@ class NameHierarchy():
 			self.nameElements.append(nameElement)
 		self.delimiter = delimiter
 
+	def copy(self):
+		ret = NameHierarchy(None, self.delimiter)
+		for nameElement in self.nameElements:
+			ret.nameElements.append(NameElement(nameElement.name, nameElement.prefix, nameElement.postfix))
+		return ret
+
 
 	def serialize(self):
 		return json.dumps(self, cls=NameHierarchyEncoder)
@@ -1114,6 +1130,14 @@ def isQualifierNode(node):
 		nextNode = getNext(nextNode)
 	if nextNode is not None and nextNode.type == 'operator' and nextNode.value == '.':
 		return True
+	return False
+
+
+def isCallNode(node):
+	nextNode = getNext(node)
+	if nextNode is not None and nextNode.type == 'trailer':
+		if len(nextNode.children) >= 2 and nextNode.children[0].value == '(' and nextNode.children[-1].value == ')':
+			return True
 	return False
 
 
