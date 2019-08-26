@@ -7,11 +7,13 @@ environment:
         - MBITS: 32
           PYTHON_VERSION: 27
           MSVC_VERSION: 15
+          PYINSTALLER_VERSION: 3.4
           DEPLOY: 0
 
         - MBITS: 32
           PYTHON_VERSION: 37
           MSVC_VERSION: 15
+          PYINSTALLER_VERSION: 3.4
           DEPLOY: 1
 
 
@@ -34,7 +36,12 @@ install:
     # install python dependencies
     - cmd: pip install parso==0.5.1
     - cmd: pip install jedi==0.15.0
-    - cmd: pip install pyinstaller
+    - cmd: pip install pyinstaller==%PYINSTALLER_VERSION%
+    - cmd: pip list
+    # modify python dependencies
+    - ps: |
+        $MBIT_STRING = "Windows-" + $env:MBITS + "bit"
+        copy -force dependencies/pyinstaller/$env:PYINSTALLER_VERSION/bootloader/${MBIT_STRING}/* $env:PYTHON_PATH/Lib/site-packages/PyInstaller/bootloader/${MBIT_STRING}/
     # prepare for SourcetrailDB build
     - ps: $env:SOURCETRAIL_DB_VERSION = python -c "from _version import _sourcetrail_db_version; print(_sourcetrail_db_version)"
     - cmd: git clone -q --branch=%SOURCETRAIL_DB_VERSION% https://github.com/CoatiSoftware/SourcetrailDB.git
