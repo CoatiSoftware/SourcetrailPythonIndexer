@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v1.db24.p2
+
+**2019-08-26**
+
+* Implemented recording a reference to the __init__() method of a class for locations where a class object is initialized (issue #49)
+* Fixed issue where some virus scanners had a false positive detection for the SourcetrailPythonIndexer (issue #48)
+* Updated to jedi 0.15.0
+* Fixed crash when looking up names for some builtin symbols
+
+
 ## v1.db24.p1
 
 **2019-08-06**
