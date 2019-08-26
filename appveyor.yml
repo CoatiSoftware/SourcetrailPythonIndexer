@@ -36,7 +36,7 @@ install:
     # install python dependencies
     - cmd: pip install parso==0.5.1
     - cmd: pip install jedi==0.15.0
-    - cmd: pip install pyinstaller==$env:PYINSTALLER_VERSION
+    - cmd: pip install pyinstaller==%PYINSTALLER_VERSION%
     - cmd: pip list
     # prepare for SourcetrailDB build
     - ps: $env:SOURCETRAIL_DB_VERSION = python -c "from _version import _sourcetrail_db_version; print(_sourcetrail_db_version)"
