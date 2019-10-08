@@ -241,6 +241,89 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('INHERITANCE: virtual_file.Baz -> unsolved symbol at [5:16|5:18]' in client.references)
 
 
+	def test_indexer_records_instantiation_of_custom_class(self):
+		client = self.indexSourceCode(
+			'class Bar:\n'
+			'	pass\n'
+			'\n'
+			'bar = Bar()\n'
+		)
+		self.assertTrue('CALL: virtual_file -> unsolved symbol at [4:7|4:9]' in client.references)
+
+
+	def test_indexer_records_instantiation_of_environment_class(self):
+		client = self.indexSourceCode(
+			'import itertools\n'
+			'itertools.cycle(None)\n'
+		)
+		self.assertTrue('CALL: virtual_file -> unsolved symbol at [2:11|2:15]' in client.references)
+
+
+	def test_indexer_records_usage_of_super_keyword(self):
+		client = self.indexSourceCode(
+			'class Foo(object):\n'
+			'	def foo():\n'
+			'		pass\n'
+			'\n'
+			'class Bar(Foo):\n'
+			'	def bar(self):\n'
+			'		super().foo()\n'
+		)
+		self.assertTrue('CALL: virtual_file.Bar.bar -> unsolved symbol at [7:3|7:7]' in client.references)
+
+
+	def test_indexer_records_usage_of_builtin_class(self):
+		client = self.indexSourceCode(
+			'foo = str(b"bar")\n'
+		)
+		self.assertTrue('CALL: virtual_file -> unsolved symbol at [1:7|1:9]' in client.references)
+
+
+	def test_indexer_records_call_to_builtin_function(self):
+		client = self.indexSourceCode(
+			'foo = "test string".islower()\n'
+		)
+		self.assertTrue('CALL: virtual_file -> unsolved symbol at [1:21|1:27]' in client.references)
+
+
+	def test_indexer_records_function_call(self):
+		client = self.indexSourceCode(
+			'def main():\n'
+			'	pass\n'
+			'\n'
+			'main()\n'
+		)
+		self.assertTrue('CALL: virtual_file -> unsolved symbol at [4:1|4:4]' in client.references)
+
+
+	def test_indexer_does_not_record_static_field_initialization_as_usage(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	x = 0\n'
+		)
+		for reference in client.references:
+			self.assertFalse(reference.startswith('USAGE: virtual_file.Foo -> unsolved symbol'))
+
+
+	def test_indexer_records_usage_of_static_field_via_self(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	x = 0\n'
+			'	def bar(self):\n'
+			'		y = self.x\n'
+		)
+		self.assertTrue('USAGE: virtual_file.Foo.bar -> unsolved symbol at [4:12|4:12]' in client.references)
+
+
+	def test_indexer_records_initialization_of_non_static_field_via_self_as_usage(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def bar(self):\n'
+			'		self.x = None\n',
+		)
+		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [3:8|3:8]' in client.references)
+
+
 # Test Atomic Ranges
 
 	def test_indexer_records_atomic_range_for_multi_line_string(self):

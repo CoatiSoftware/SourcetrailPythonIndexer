@@ -282,7 +282,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('INHERITANCE: virtual_file.Baz -> virtual_file.Bar at [5:16|5:18]' in client.references)
 
 
-	def test_indexer_records_instantiation_of_custom_class(self): #FixmeInShallowMode
+	def test_indexer_records_instantiation_of_custom_class(self):
 		client = self.indexSourceCode(
 			'class Bar:\n'
 			'	pass\n'
@@ -292,7 +292,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('TYPE_USAGE: virtual_file -> virtual_file.Bar at [4:7|4:9]' in client.references)
 
 
-	def test_indexer_records_instantiation_of_environment_class(self): #FixmeInShallowMode
+	def test_indexer_records_instantiation_of_environment_class(self):
 		client = self.indexSourceCode(
 			'import itertools\n'
 			'itertools.cycle(None)\n'
@@ -300,7 +300,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('CALL: virtual_file -> itertools.cycle at [2:11|2:15]' in client.references)
 
 
-	def test_indexer_records_usage_of_super_keyword(self): #FixmeInShallowMode
+	def test_indexer_records_usage_of_super_keyword(self):
 		client = self.indexSourceCode(
 			'class Foo(object):\n'
 			'	def foo():\n'
@@ -315,14 +315,14 @@ class TestPythonIndexer(unittest.TestCase):
 			'CALL: virtual_file.Bar.bar -> builtins.super at [7:3|7:7]' in client.references) # somehow the CI records a "call" reference. maybe that's a python 2 thing...
 
 
-	def test_indexer_records_usage_of_builtin_class(self): #FixmeInShallowMode
+	def test_indexer_records_usage_of_builtin_class(self):
 		client = self.indexSourceCode(
 			'foo = str(b"bar")\n'
 		)
 		self.assertTrue('TYPE_USAGE: virtual_file -> builtins.str at [1:7|1:9]' in client.references)
 
 
-	def test_indexer_records_call_to_builtin_function(self): #FixmeInShallowMode
+	def test_indexer_records_call_to_builtin_function(self):
 		client = self.indexSourceCode(
 			'foo = "test string".islower()\n'
 		)
@@ -336,7 +336,7 @@ class TestPythonIndexer(unittest.TestCase):
 #		self.assertTrue('CALL: virtual_file -> sys.callstats at [2:5|2:13]' in client.references)
 
 
-	def test_indexer_records_function_call(self): #FixmeInShallowMode
+	def test_indexer_records_function_call(self):
 		client = self.indexSourceCode(
 			'def main():\n'
 			'	pass\n'
@@ -346,7 +346,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('CALL: virtual_file -> virtual_file.main at [4:1|4:4]' in client.references)
 
 
-	def test_indexer_does_not_record_static_field_initialization_as_usage(self): #FixmeInShallowMode
+	def test_indexer_does_not_record_static_field_initialization_as_usage(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	x = 0\n'
@@ -355,7 +355,7 @@ class TestPythonIndexer(unittest.TestCase):
 			self.assertFalse(reference.startswith('USAGE: virtual_file.Foo -> virtual_file.Foo.x'))
 
 
-	def test_indexer_records_usage_of_static_field_via_self(self): #FixmeInShallowMode
+	def test_indexer_records_usage_of_static_field_via_self(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	x = 0\n'
@@ -365,7 +365,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [4:12|4:12]' in client.references)
 
 
-	def test_indexer_records_initialization_of_non_static_field_via_self_as_usage(self): #FixmeInShallowMode
+	def test_indexer_records_initialization_of_non_static_field_via_self_as_usage(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def bar(self):\n'

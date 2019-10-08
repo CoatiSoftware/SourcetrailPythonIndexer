@@ -367,6 +367,14 @@ class AstVisitor:
 				self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_IMPORT, getSourceRangeOfNode(node))
 				return
 
+		referenceKind = srctrl.REFERENCE_USAGE
+		if getNext(node) is not None and getNext(node).type == "trailer":
+			trailerNode = getNext(node)
+			if hasattr(trailerNode, 'children') and len(trailerNode.children) > 0:
+				firstTailingNode = trailerNode.children[0]
+				if firstTailingNode.type == "operator" and firstTailingNode.value == "(":
+					referenceKind = srctrl.REFERENCE_CALL
+
 		if node.is_definition():
 			namedDefinitionParentNode = getParentWithTypeInList(node, ['classdef', 'funcdef'])
 			if namedDefinitionParentNode is not None:
@@ -389,14 +397,19 @@ class AstVisitor:
 							# definition is a non-static member variable
 							symbolNameHierarchy = self.getNameHierarchyOfNode(node)
 							if symbolNameHierarchy is not None:
+								sourceRange = getSourceRangeOfNode(node)
+
 								symbolId = self.client.recordSymbol(symbolNameHierarchy)
 								self.client.recordSymbolKind(symbolId, srctrl.SYMBOL_FIELD)
 								self.client.recordSymbolDefinitionKind(symbolId, srctrl.DEFINITION_EXPLICIT)
-								self.client.recordSymbolLocation(symbolId, getSourceRangeOfNode(node))
+								self.client.recordSymbolLocation(symbolId, sourceRange)
+
+								referenceId = self.client.recordReference(self.contextStack[-1].id, symbolId, referenceKind)
+								self.client.recordReferenceLocation(referenceId, sourceRange)
 								return
 						else:
 							# despite "node.is_definition()" says so, this is just a re-definition of an other class' member
-							self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
+							self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, referenceKind, getSourceRangeOfNode(node))
 							return
 					localSymbolId = self.client.recordLocalSymbol(self.getLocalSymbolName(node))
 					self.client.recordLocalSymbolLocation(localSymbolId, getSourceRangeOfNode(node))
@@ -423,7 +436,7 @@ class AstVisitor:
 					return
 
 		# fallback if not returned before
-		self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_USAGE, getSourceRangeOfNode(node))
+		self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, referenceKind, getSourceRangeOfNode(node))
 
 
 	def endVisitName(self, node):
