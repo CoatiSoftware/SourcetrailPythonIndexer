@@ -105,6 +105,7 @@ after_build:
 
 test_script:
     - cmd: python test.py
+    - cmd: python test_shallow.py
     - ps: $env:SOURCETRAIL_DB_DATABASE_VERSION = python -c "import sourcetraildb; print(sourcetraildb.getSupportedDatabaseVersion())"
     - ps: |
         if ($env:SOURCETRAIL_DB_DATABASE_VERSION -eq $env:DATABASE_VERSION) {
