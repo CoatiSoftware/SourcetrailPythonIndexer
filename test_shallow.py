@@ -135,6 +135,76 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording References
 
+	def test_indexer_records_import_of_builtin_module(self):
+		client = self.indexSourceCode(
+			'import itertools\n',
+		)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:8|1:16]' in client.references)
+
+
+	def test_indexer_records_import_of_multiple_modules_with_single_import_statement(self):
+		client = self.indexSourceCode(
+			'import itertools, re\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:8|1:16]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:19|1:20]' in client.references)
+
+
+	def test_indexer_records_import_of_aliased_module_as_global_symbol(self):
+		# this is required to find matching name if "it" is used throughout the file
+		client = self.indexSourceCode(
+			'import itertools as it\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:8|1:16]' in client.references)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.it at [1:21|1:22]' in client.symbols)
+
+
+	def test_indexer_records_import_of_multiple_alised_modules_with_single_import_statement_as_global_symbols(self):
+		client = self.indexSourceCode(
+			'import itertools as it, re as regex\n'
+		)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:8|1:16]' in client.references)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.it at [1:21|1:22]' in client.symbols)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:25|1:26]' in client.references)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.regex at [1:31|1:35]' in client.symbols)
+
+
+	def test_indexer_records_import_of_function(self):
+		client = self.indexSourceCode(
+			'from re import match\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> unsolved symbol at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:16|1:20]' in client.references)
+
+
+	def test_indexer_records_import_of_aliased_function(self):
+		client = self.indexSourceCode(
+			'from re import match as m\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> unsolved symbol at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:16|1:20]' in client.references)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.m at [1:25|1:25]' in client.symbols)
+
+
+	def test_indexer_records_import_of_multiple_aliased_functions_with_single_import_statement(self):
+		client = self.indexSourceCode(
+			'from re import match as m, escape as e\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> unsolved symbol at [1:6|1:7]' in client.references)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:16|1:20]' in client.references)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.m at [1:25|1:25]' in client.symbols)
+		self.assertTrue('IMPORT: virtual_file -> unsolved symbol at [1:28|1:33]' in client.references)
+		self.assertTrue('GLOBAL_VARIABLE: virtual_file.e at [1:38|1:38]' in client.symbols)
+
+
+	def test_indexer_records_usage_of_imported_module(self):
+		client = self.indexSourceCode(
+			'import sys\n'
+			'dir(sys)\n'
+		)
+		self.assertTrue('USAGE: virtual_file -> unsolved symbol at [2:5|2:7]' in client.references)
+
+
 	def test_indexer_records_usage_for_access_of_other_class_field(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'

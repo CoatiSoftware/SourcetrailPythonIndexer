@@ -145,6 +145,12 @@ class AstVisitor:
 			self.traverseParam(node)
 		elif node.type == 'argument':
 			self.traverseArgument(node)
+		elif node.type == 'import_from':
+			self.traverseImportFrom(node)
+		elif node.type == 'dotted_as_name':
+			self.traverseDottedAsNameOrImportAsName(node)
+		elif node.type == 'import_as_name':
+			self.traverseDottedAsNameOrImportAsName(node)
 		else:
 			if node.type == 'name':
 				self.beginVisitName(node)
@@ -152,6 +158,8 @@ class AstVisitor:
 				self.beginVisitString(node)
 			elif node.type == 'error_leaf':
 				self.beginVisitErrorLeaf(node)
+			elif node.type == 'import_name':
+				self.beginVisitImportName(node)
 
 			if hasattr(node, 'children'):
 				for c in node.children:
@@ -163,6 +171,8 @@ class AstVisitor:
 				self.endVisitString(node)
 			elif node.type == 'error_leaf':
 				self.endVisitErrorLeaf(node)
+			elif node.type == 'import_name':
+				self.endVisitImportName(node)
 
 #----------------
 
@@ -219,6 +229,41 @@ class AstVisitor:
 
 		for i in range(childTraverseStartIndex, len(node.children)):
 			self.traverseNode(node.children[i])
+
+
+	def traverseImportFrom(self, node):
+		if node is None:
+			return
+
+		referenceKindAdded = False
+
+		for c in node.children:
+			self.traverseNode(c)
+			if c.type == 'keyword' and c.value == 'import' and not referenceKindAdded:
+				self.referenceKindStack.append(ReferenceKindInfo(srctrl.REFERENCE_IMPORT, node))
+				referenceKindAdded = True
+
+		if referenceKindAdded:
+			self.referenceKindStack.pop()
+
+
+	def traverseDottedAsNameOrImportAsName(self, node):
+		if node is None:
+			return
+
+		referenceKindRemoved = False
+		previousReferenceKind = None
+
+		for c in node.children:
+			self.traverseNode(c)
+			if c.type == 'keyword' and c.value == 'as' and not referenceKindRemoved and len(self.referenceKindStack) > 0:
+				previousReferenceKind = self.referenceKindStack[-1]
+				self.referenceKindStack.pop()
+				referenceKindRemoved = True
+
+		if referenceKindRemoved:
+			self.referenceKindStack.append(previousReferenceKind)
+
 
 #----------------
 
@@ -314,9 +359,13 @@ class AstVisitor:
 		if node.value in ['True', 'False', 'None']: # these are not parsed as "keywords" in Python 2
 			return
 
-		if len(self.referenceKindStack) > 0 and self.referenceKindStack[-1] is not None and self.referenceKindStack[-1].kind == srctrl.REFERENCE_INHERITANCE:
-			self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_INHERITANCE, getSourceRangeOfNode(node))
-			return
+		if len(self.referenceKindStack) > 0 and self.referenceKindStack[-1] is not None:
+			if self.referenceKindStack[-1].kind == srctrl.REFERENCE_INHERITANCE:
+				self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_INHERITANCE, getSourceRangeOfNode(node))
+				return
+			if self.referenceKindStack[-1].kind == srctrl.REFERENCE_IMPORT:
+				self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_IMPORT, getSourceRangeOfNode(node))
+				return
 
 		if node.is_definition():
 			namedDefinitionParentNode = getParentWithTypeInList(node, ['classdef', 'funcdef'])
@@ -406,6 +455,18 @@ class AstVisitor:
 			contextNode = self.contextStack[-1].node
 			if node == contextNode:
 				self.contextStack.pop()
+
+
+	def beginVisitImportName(self, node):
+		self.referenceKindStack.append(ReferenceKindInfo(srctrl.REFERENCE_IMPORT, node))
+
+
+	def endVisitImportName(self, node):
+		if len(self.referenceKindStack) > 0:
+			referenceKindNode = self.referenceKindStack[-1].node
+			if node == referenceKindNode:
+				self.referenceKindStack.pop()
+
 
 #----------------
 
