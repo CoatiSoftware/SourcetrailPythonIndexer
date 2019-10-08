@@ -127,21 +127,21 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Recording References
 
-	def test_indexer_records_import_of_builtin_module(self):
+	def test_indexer_records_import_of_builtin_module(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import itertools\n'
 		)
 		self.assertTrue('IMPORT: virtual_file -> itertools at [1:8|1:16]' in client.references)
 
 
-	def test_indexer_records_import_of_custom_module(self):
+	def test_indexer_records_import_of_custom_module(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import re\n'
 		)
 		self.assertTrue('IMPORT: virtual_file -> re at [1:8|1:9]' in client.references)
 
 
-	def test_indexer_records_import_of_multiple_modules_with_single_import_statement(self):
+	def test_indexer_records_import_of_multiple_modules_with_single_import_statement(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import itertools, re\n'
 		)
@@ -149,7 +149,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re at [1:19|1:20]' in client.references)
 
 
-	def test_indexer_records_import_of_aliased_module(self):
+	def test_indexer_records_import_of_aliased_module(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import itertools as it\n'
 		)
@@ -157,7 +157,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> itertools at [1:21|1:22]' in client.references)
 
 
-	def test_indexer_records_import_of_multiple_alised_modules_with_single_import_statement(self):
+	def test_indexer_records_import_of_multiple_alised_modules_with_single_import_statement(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import itertools as it, re as regex\n'
 		)
@@ -167,7 +167,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re at [1:31|1:35]' in client.references)
 
 
-	def test_indexer_records_import_of_function(self):
+	def test_indexer_records_import_of_function(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'from re import match\n'
 		)
@@ -175,7 +175,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re.match at [1:16|1:20]' in client.references)
 
 
-	def test_indexer_records_import_of_aliased_function(self):
+	def test_indexer_records_import_of_aliased_function(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'from re import match as m\n'
 		)
@@ -184,7 +184,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re.match at [1:25|1:25]' in client.references)
 
 
-	def test_indexer_records_import_of_multiple_aliased_functions_with_single_import_statement(self):
+	def test_indexer_records_import_of_multiple_aliased_functions_with_single_import_statement(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'from re import match as m, escape as e\n'
 		)
@@ -195,7 +195,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re.escape at [1:38|1:38]' in client.references)
 
 
-	def test_indexer_records_import_of_variable(self):
+	def test_indexer_records_import_of_variable(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'from sys import float_info\n'
 		)
@@ -203,7 +203,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> sys.float_info at [1:17|1:26]' in client.references)
 
 
-	def test_indexer_records_import_of_aliased_variable(self):
+	def test_indexer_records_import_of_aliased_variable(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'from sys import float_info as FI\n'
 		)
@@ -212,7 +212,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> sys.float_info at [1:31|1:32]' in client.references)
 
 
-	def test_indexer_records_import_of_multiple_aliased_variables_with_single_import_statement(self):
+	def test_indexer_records_import_of_multiple_aliased_variables_with_single_import_statement(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'from sys import float_info as FI, api_version as AI\n'
 		)
@@ -223,7 +223,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> sys.api_version at [1:50|1:51]' in client.references)
 
 
-	def test_indexer_records_import_of_class(self):
+	def test_indexer_records_import_of_class(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'from re import Scanner\n'
 		)
@@ -231,7 +231,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:16|1:22]' in client.references)
 
 
-	def test_indexer_records_import_of_aliased_class(self):
+	def test_indexer_records_import_of_aliased_class(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'from re import Scanner as Sc\n'
 		)
@@ -240,7 +240,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:27|1:28]' in client.references)
 
 
-	def test_indexer_records_import_of_multiple_aliased_classes_with_single_import_statement(self):
+	def test_indexer_records_import_of_multiple_aliased_classes_with_single_import_statement(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'from re import Scanner as S1, Scanner as S2\n'
 		)
@@ -251,7 +251,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('IMPORT: virtual_file -> re.Scanner at [1:42|1:43]' in client.references)
 
 
-	def test_indexer_records_usage_of_imported_module(self):
+	def test_indexer_records_usage_of_imported_module(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import sys\n'
 			'dir(sys)\n'
@@ -282,7 +282,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('INHERITANCE: virtual_file.Baz -> virtual_file.Bar at [5:16|5:18]' in client.references)
 
 
-	def test_indexer_records_instantiation_of_custom_class(self):
+	def test_indexer_records_instantiation_of_custom_class(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'class Bar:\n'
 			'	pass\n'
@@ -292,7 +292,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('TYPE_USAGE: virtual_file -> virtual_file.Bar at [4:7|4:9]' in client.references)
 
 
-	def test_indexer_records_instantiation_of_environment_class(self):
+	def test_indexer_records_instantiation_of_environment_class(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import itertools\n'
 			'itertools.cycle(None)\n'
@@ -300,7 +300,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('CALL: virtual_file -> itertools.cycle at [2:11|2:15]' in client.references)
 
 
-	def test_indexer_records_usage_of_super_keyword(self):
+	def test_indexer_records_usage_of_super_keyword(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'class Foo(object):\n'
 			'	def foo():\n'
@@ -315,14 +315,14 @@ class TestPythonIndexer(unittest.TestCase):
 			'CALL: virtual_file.Bar.bar -> builtins.super at [7:3|7:7]' in client.references) # somehow the CI records a "call" reference. maybe that's a python 2 thing...
 
 
-	def test_indexer_records_usage_of_builtin_class(self):
+	def test_indexer_records_usage_of_builtin_class(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'foo = str(b"bar")\n'
 		)
 		self.assertTrue('TYPE_USAGE: virtual_file -> builtins.str at [1:7|1:9]' in client.references)
 
 
-	def test_indexer_records_call_to_builtin_function(self):
+	def test_indexer_records_call_to_builtin_function(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'foo = "test string".islower()\n'
 		)
@@ -336,7 +336,7 @@ class TestPythonIndexer(unittest.TestCase):
 #		self.assertTrue('CALL: virtual_file -> sys.callstats at [2:5|2:13]' in client.references)
 
 
-	def test_indexer_records_function_call(self):
+	def test_indexer_records_function_call(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'def main():\n'
 			'	pass\n'
@@ -346,7 +346,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('CALL: virtual_file -> virtual_file.main at [4:1|4:4]' in client.references)
 
 
-	def test_indexer_does_not_record_static_field_initialization_as_usage(self):
+	def test_indexer_does_not_record_static_field_initialization_as_usage(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	x = 0\n'
@@ -355,7 +355,7 @@ class TestPythonIndexer(unittest.TestCase):
 			self.assertFalse(reference.startswith('USAGE: virtual_file.Foo -> virtual_file.Foo.x'))
 
 
-	def test_indexer_records_usage_of_static_field_via_self(self):
+	def test_indexer_records_usage_of_static_field_via_self(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	x = 0\n'
@@ -365,7 +365,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [4:12|4:12]' in client.references)
 
 
-	def test_indexer_records_initialization_of_non_static_field_via_self_as_usage(self):
+	def test_indexer_records_initialization_of_non_static_field_via_self_as_usage(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def bar(self):\n'
@@ -376,7 +376,7 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Qualifiers
 
-	def test_indexer_records_module_as_qualifier_in_import_statement(self):
+	def test_indexer_records_module_as_qualifier_in_import_statement(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import pkg.mod\n',
 			None,
@@ -385,7 +385,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('pkg at [1:8|1:10]' in client.qualifiers)
 
 
-	def test_indexer_records_module_as_qualifier_in_expression_statement(self):
+	def test_indexer_records_module_as_qualifier_in_expression_statement(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import sys\n'
 			'print(sys.executable)\n'
@@ -393,7 +393,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('sys at [2:7|2:9]' in client.qualifiers)
 
 
-	def test_indexer_records_class_as_qualifier_in_expression_statement(self):
+	def test_indexer_records_class_as_qualifier_in_expression_statement(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	bar = 0\n'
@@ -403,7 +403,7 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Package and Module Names
 
-	def test_indexer_resolves_packge_name_relative_to_sys_path(self):
+	def test_indexer_resolves_packge_name_relative_to_sys_path(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import pkg\n'
 			'c = pkg.PackageLevelClass()\n'
@@ -416,7 +416,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('NON-INDEXED SYMBOL: pkg.PackageLevelClass.field' in client.symbols)
 
 
-	def test_indexer_resolves_module_name_relative_to_sys_path(self):
+	def test_indexer_resolves_module_name_relative_to_sys_path(self): #FixmeInShallowMode
 		client = self.indexSourceCode(
 			'import pkg.mod\n'
 			'c = pkg.mod.ModuleLevelClass()\n'
