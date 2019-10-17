@@ -1121,7 +1121,7 @@ class NameHierarchyEncoder(json.JSONEncoder):
 
 
 def getNameHierarchyForUnsolvedSymbol():
-	return NameHierarchy(NameElement(NameHierarchy.unsolvedSymbolName), '.')
+	return NameHierarchy(NameElement(NameHierarchy.unsolvedSymbolName), '')
 
 
 def isQualifierNode(node):

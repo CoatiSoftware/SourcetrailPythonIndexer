@@ -376,7 +376,7 @@ class TestPythonIndexer(unittest.TestCase):
 
 # Test Qualifiers
 
-	def test_indexer_records_module_as_qualifier_in_import_statement(self): #FixmeInShallowMode
+	def test_indexer_records_module_as_qualifier_in_import_statement(self):
 		client = self.indexSourceCode(
 			'import pkg.mod\n',
 			None,
@@ -385,7 +385,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('pkg at [1:8|1:10]' in client.qualifiers)
 
 
-	def test_indexer_records_module_as_qualifier_in_expression_statement(self): #FixmeInShallowMode
+	def test_indexer_records_module_as_qualifier_in_expression_statement(self):
 		client = self.indexSourceCode(
 			'import sys\n'
 			'print(sys.executable)\n'
@@ -393,13 +393,14 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('sys at [2:7|2:9]' in client.qualifiers)
 
 
-	def test_indexer_records_class_as_qualifier_in_expression_statement(self): #FixmeInShallowMode
+	def test_indexer_records_class_as_qualifier_in_expression_statement(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	bar = 0\n'
 			'baz = Foo.bar\n'
 		)
 		self.assertTrue('virtual_file.Foo at [3:7|3:9]' in client.qualifiers)
+
 
 # Test Package and Module Names
 

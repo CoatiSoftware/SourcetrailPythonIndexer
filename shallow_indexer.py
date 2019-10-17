@@ -359,6 +359,14 @@ class AstVisitor:
 		if node.value in ['True', 'False', 'None']: # these are not parsed as "keywords" in Python 2
 			return
 
+		nextLeafNode = getNextLeaf(node)
+
+		if nextLeafNode is not None and nextLeafNode.type == "operator" and nextLeafNode.value == ".":
+			symbolNameHierarchy = getNameHierarchyForUnsolvedSymbol()
+			symbolId = self.client.recordSymbol(symbolNameHierarchy)
+			self.client.recordQualifierLocation(symbolId, getSourceRangeOfNode(node))
+			return
+
 		if len(self.referenceKindStack) > 0 and self.referenceKindStack[-1] is not None:
 			if self.referenceKindStack[-1].kind == srctrl.REFERENCE_INHERITANCE:
 				self.client.recordReferenceToUnsolvedSymhol(self.contextStack[-1].id, srctrl.REFERENCE_INHERITANCE, getSourceRangeOfNode(node))
@@ -368,12 +376,8 @@ class AstVisitor:
 				return
 
 		referenceKind = srctrl.REFERENCE_USAGE
-		if getNext(node) is not None and getNext(node).type == "trailer":
-			trailerNode = getNext(node)
-			if hasattr(trailerNode, 'children') and len(trailerNode.children) > 0:
-				firstTailingNode = trailerNode.children[0]
-				if firstTailingNode.type == "operator" and firstTailingNode.value == "(":
-					referenceKind = srctrl.REFERENCE_CALL
+		if nextLeafNode is not None and nextLeafNode.type == "operator" and nextLeafNode.value == "(":
+			referenceKind = srctrl.REFERENCE_CALL
 
 		if node.is_definition():
 			namedDefinitionParentNode = getParentWithTypeInList(node, ['classdef', 'funcdef'])
@@ -597,7 +601,7 @@ class VerboseAstVisitor(AstVisitor):
 
 
 def getNameHierarchyForUnsolvedSymbol():
-	return NameHierarchy(NameElement(NameHierarchy.unsolvedSymbolName), '.')
+	return NameHierarchy(NameElement(NameHierarchy.unsolvedSymbolName), '')
 
 
 def isQualifierNode(node):
@@ -682,3 +686,12 @@ def getNext(node):
 		siblingSource = siblingSource.parent
 
 	return None
+
+
+
+def getNextLeaf(node):
+	nextNode = getNext(node)
+	while nextNode is not None and hasattr(nextNode, 'children'):
+		nextNode = getNext(nextNode)
+	return nextNode
+

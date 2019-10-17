@@ -324,6 +324,33 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('USAGE: virtual_file.Foo.bar -> virtual_file.Foo.x at [3:8|3:8]' in client.references)
 
 
+# Test Qualifiers
+
+	def test_indexer_records_module_as_qualifier_in_import_statement(self):
+		client = self.indexSourceCode(
+			'import pkg.mod\n',
+			[os.path.join(os.getcwd(), 'data', 'test')]
+		)
+		self.assertTrue('unsolved symbol at [1:8|1:10]' in client.qualifiers)
+
+
+	def test_indexer_records_module_as_qualifier_in_expression_statement(self):
+		client = self.indexSourceCode(
+			'import sys\n'
+			'print(sys.executable)\n'
+		)
+		self.assertTrue('unsolved symbol at [2:7|2:9]' in client.qualifiers)
+
+
+	def test_indexer_records_class_as_qualifier_in_expression_statement(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	bar = 0\n'
+			'baz = Foo.bar\n'
+		)
+		self.assertTrue('unsolved symbol at [3:7|3:9]' in client.qualifiers)
+
+
 # Test Atomic Ranges
 
 	def test_indexer_records_atomic_range_for_multi_line_string(self):
