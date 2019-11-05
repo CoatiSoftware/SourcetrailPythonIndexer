@@ -1015,8 +1015,6 @@ def symbolKindToString(symbolKind):
 		return 'ENUM_CONSTANT'
 	if symbolKind == srctrl.SYMBOL_TYPEDEF:
 		return 'TYPEDEF'
-	if symbolKind == srctrl.SYMBOL_TEMPLATE_PARAMETER:
-		return 'TEMPLATE_PARAMETER'
 	if symbolKind == srctrl.SYMBOL_TYPE_PARAMETER:
 		return 'TYPE_PARAMETER'
 	if symbolKind == srctrl.SYMBOL_FILE:
@@ -1039,16 +1037,10 @@ def referenceKindToString(referenceKind):
 		return 'INHERITANCE'
 	if referenceKind == srctrl.REFERENCE_OVERRIDE:
 		return 'OVERRIDE'
-	if referenceKind == srctrl.REFERENCE_TEMPLATE_ARGUMENT:
-		return 'TEMPLATE_ARGUMENT'
 	if referenceKind == srctrl.REFERENCE_TYPE_ARGUMENT:
 		return 'TYPE_ARGUMENT'
-	if referenceKind == srctrl.REFERENCE_TEMPLATE_DEFAULT_ARGUMENT:
-		return 'TEMPLATE_DEFAULT_ARGUMENT'
 	if referenceKind == srctrl.REFERENCE_TEMPLATE_SPECIALIZATION:
 		return 'TEMPLATE_SPECIALIZATION'
-	if referenceKind == srctrl.REFERENCE_TEMPLATE_MEMBER_SPECIALIZATION:
-		return 'TEMPLATE_MEMBER_SPECIALIZATION'
 	if referenceKind == srctrl.REFERENCE_INCLUDE:
 		return 'INCLUDE'
 	if referenceKind == srctrl.REFERENCE_IMPORT:
