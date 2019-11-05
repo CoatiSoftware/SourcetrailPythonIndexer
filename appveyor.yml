@@ -36,8 +36,10 @@ install:
     # install python dependencies
     - ps: |
         if ($env:DEPLOY -eq "0") {
+            pip -V
             pip install enum34
         }
+    - cmd: pip -V
     - cmd: pip install parso==0.5.1
     - cmd: pip install jedi==0.15.0
     - cmd: pip install pyinstaller==%PYINSTALLER_VERSION%
