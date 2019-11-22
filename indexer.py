@@ -15,7 +15,7 @@ _virtualFilePath = 'virtual_file.py'
 
 def isValidEnvironment(environmentPath):
 	try:
-		environment = jedi.create_environment(environmentPath)
+		environment = jedi.create_environment(environmentPath, False)
 		environment._get_subprocess() # check if this environment is really functional
 	except Exception as e:
 		return str(e)
@@ -25,7 +25,7 @@ def isValidEnvironment(environmentPath):
 def getEnvironment(environmentPath = None):
 	if environmentPath is not None:
 		try:
-			environment = jedi.create_environment(environmentPath)
+			environment = jedi.create_environment(environmentPath, False)
 			environment._get_subprocess() # check if this environment is really functional
 			return environment
 		except Exception as e:
