@@ -1,6 +1,21 @@
 # Changelog
 
 
+## v1.db25.p1
+
+**2019-11-26**
+
+* Switched form Apache License to GNU GENERAL PUBLIC LICENSE.
+* Allow to use "unsafe" Python environment if this environment has explicitly been specified by the user.
+
+
+## v1.db25.p0
+
+**2019-11-05**
+
+* Added shallow indexer that is less precide than the normal indexer but much faster. This mode can be invoked by adding the `--shallow` command line argument.
+
+
 ## v1.db24.p2
 
 **2019-08-26**
