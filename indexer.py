@@ -18,6 +18,13 @@ def isValidEnvironment(environmentPath):
 		environment = jedi.create_environment(environmentPath, False)
 		environment._get_subprocess() # check if this environment is really functional
 	except Exception as e:
+		if os.name == 'nt' and os.path.isdir(environmentPath):
+			try:
+				environment = jedi.create_environment(os.path.join(environmentPath, "python.exe"), False)
+				environment._get_subprocess() # check if this environment is really functional
+				return ''
+			except Exception:
+				pass
 		return str(e)
 	return ''
 
@@ -29,6 +36,13 @@ def getEnvironment(environmentPath = None):
 			environment._get_subprocess() # check if this environment is really functional
 			return environment
 		except Exception as e:
+			if os.name == 'nt' and os.path.isdir(environmentPath):
+				try:
+					environment = jedi.create_environment(os.path.join(environmentPath, "python.exe"), False)
+					environment._get_subprocess() # check if this environment is really functional
+					return environment
+				except Exception:
+					pass
 			print('WARNING: The provided environment path "' + environmentPath + '" does not specify a functional Python '
 				'environment (details: "' + str(e) + '"). Using fallback environment instead.')
 
