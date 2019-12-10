@@ -1,6 +1,13 @@
 # Changelog
 
 
+## v1.db25.p2
+
+**2019-12-10**
+
+* Fixed an issue that caused the Python indexer to ignore a valid Python environment where the python.exe is located in the root directory on Winodws.
+
+
 ## v1.db25.p1
 
 **2019-11-26**
