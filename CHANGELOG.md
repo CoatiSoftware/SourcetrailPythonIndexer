@@ -1,6 +1,13 @@
 # Changelog
 
 
+## v1.db25.p3
+
+**2020-02-24**
+
+* Updated dependencies to jedi 0.16.0 and parso 0.6.1.
+
+
 ## v1.db25.p2
 
 **2019-12-10**
