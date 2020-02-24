@@ -328,12 +328,13 @@ class TestPythonIndexer(unittest.TestCase):
 		)
 		self.assertTrue('CALL: virtual_file -> builtins.str.islower at [1:21|1:27]' in client.references)
 
-#	def test_indexer_records_call_to_environment_function(self):
-#		client = self.indexSourceCode(
-#			'import sys\n'
-#			'sys.callstats()\n'
-#		)
-#		self.assertTrue('CALL: virtual_file -> sys.callstats at [2:5|2:13]' in client.references)
+
+	def test_indexer_records_call_to_environment_function(self):
+		client = self.indexSourceCode(
+			'import sys\n'
+			'sys.setrecursionlimit(42)\n'
+		)
+		self.assertTrue('CALL: virtual_file -> sys.setrecursionlimit at [2:5|2:21]' in client.references)
 
 
 	def test_indexer_records_function_call(self):
