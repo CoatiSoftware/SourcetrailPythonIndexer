@@ -5,12 +5,46 @@ import os
 import sys
 
 import sourcetraildb as srctrl
-from jedi._compatibility import all_suffixes
+
+from jedi.inference import InferenceState
+from jedi.api import helpers
+from jedi.inference.gradual.conversion import convert_names
+from jedi.api import classes
+
 from _version import __version__
 from _version import _sourcetrail_db_version
 
 
 _virtualFilePath = 'virtual_file.py'
+
+
+class SourcetrailScript(jedi.Script):
+	def __init__(self, source=None, line=None, column=None, path=None,
+				encoding='utf-8', sys_path=None, environment=None,
+				_project=None):
+		jedi.Script.__init__(self, source, line, column, path, encoding, sys_path, environment, _project)
+
+	def _goto(self, line, column, follow_imports=False, follow_builtin_imports=False,
+				only_stubs=False, prefer_stubs=False):
+		tree_name = self._module_node.get_name_of_position((line, column))
+		if tree_name is None:
+			# Without a name we really just want to jump to the result e.g.
+			# executed by `foo()`, if we the cursor is after `)`.
+			return self.infer(line, column, only_stubs=only_stubs, prefer_stubs=prefer_stubs)
+		name = self._get_module_context().create_name(tree_name)
+
+		names = list(name.goto())
+
+		if follow_imports:
+			names = helpers.filter_follow_imports(names)
+		names = convert_names(
+			names,
+			only_stubs=only_stubs,
+			prefer_stubs=prefer_stubs,
+		)
+
+		defs = [classes.Definition(self._inference_state, d) for d in set(names)]
+		return helpers.sorted_definitions(defs)
 
 
 def isValidEnvironment(environmentPath):
@@ -94,7 +128,7 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, e
 
 	project = jedi.api.project.Project(workingDirectory, environment = environment)
 
-	evaluator = jedi.evaluate.Evaluator(
+	evaluator = InferenceState(
 		project,
 		environment=environment,
 		script_path=workingDirectory
@@ -131,7 +165,7 @@ def indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisito
 
 	project = jedi.api.project.Project(workingDirectory, environment = environment)
 
-	evaluator = jedi.evaluate.Evaluator(
+	evaluator = InferenceState(
 		project,
 		environment=environment,
 		script_path=workingDirectory
@@ -188,7 +222,7 @@ class AstVisitor:
 		self.sysPath = list(filter(None, self.sysPath))
 
 		self.contextStack = []
-
+		
 		fileId = self.client.recordFile(self.sourceFilePath)
 		if fileId == 0:
 			print('ERROR: ' + srctrl.getLastError())
@@ -791,23 +825,19 @@ class AstVisitor:
 		try:
 			(startLine, startColumn) = node.start_pos
 			if nodeSourceFilePath == _virtualFilePath: # we are indexing a provided code snippet
-				script = jedi.Script(
+				script = SourcetrailScript(
 					source = self.sourceFileContent,
-					line = startLine,
-					column = startColumn,
 					environment = self.environment,
 					sys_path = self.sysPath
 				)
 			else: # we are indexing a real file
-				script = jedi.Script(
+				script = SourcetrailScript(
 					source = None,
-					line = startLine,
-					column = startColumn,
 					path = nodeSourceFilePath,
 					environment = self.environment,
 					sys_path = self.sysPath
 				)
-			return script.goto_assignments(follow_imports=True)
+			return script.goto(line=startLine, column=startColumn, follow_imports=True)
 
 		except Exception:
 			return []

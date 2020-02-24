@@ -35,8 +35,8 @@ install:
     - SET PATH=%PYTHON_PATH%;%PIP_PATH%;%PATH%
     # install python dependencies
     - cmd: IF %DEPLOY% EQU 0 pip install enum34
-    - cmd: pip install parso==0.5.1
-    - cmd: pip install jedi==0.15.0
+    - cmd: pip install parso==0.6.1
+    - cmd: pip install jedi==0.16.0
     - cmd: pip install pyinstaller==%PYINSTALLER_VERSION%
     - cmd: pip list
     # modify python dependencies
