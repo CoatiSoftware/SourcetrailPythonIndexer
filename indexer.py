@@ -155,8 +155,13 @@ def indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisito
 		print('INFO: Indexing source file "' + sourceFilePath + '".')
 
 	sourceCode = ''
-	with codecs.open(sourceFilePath, 'r', encoding='utf-8') as input:
-		sourceCode=input.read()
+	try:
+		with codecs.open(sourceFilePath, 'r', encoding='utf-8') as input:
+			sourceCode=input.read()
+	except UnicodeDecodeError:
+		print('WARNING: Unable to open source file using utf-8 encoding. Trying to derive encoding automatically.')
+		with codecs.open(sourceFilePath, 'r') as input:
+			sourceCode=input.read()
 
 	environment = getEnvironment(environmentPath)
 
