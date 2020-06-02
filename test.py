@@ -259,7 +259,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('USAGE: virtual_file -> sys at [2:5|2:7]' in client.references)
 
 
-	def test_indexer_records_single_class_inheritence(self):
+	def test_indexer_records_single_class_inheritance(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	pass\n'
@@ -269,7 +269,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('INHERITANCE: virtual_file.Bar -> virtual_file.Foo at [3:11|3:13]' in client.references)
 
 
-	def test_indexer_records_multiple_class_inheritence(self):
+	def test_indexer_records_multiple_class_inheritance(self):
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	pass\n'
@@ -283,6 +283,9 @@ class TestPythonIndexer(unittest.TestCase):
 
 
 	def test_indexer_records_override_edge_for_method_defined_in_single_inheritance_parent(self):
+		if sys.version_info.major == 2:
+			return
+
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def my_method(self):\n'
@@ -295,6 +298,9 @@ class TestPythonIndexer(unittest.TestCase):
 
 
 	def test_indexer_records_override_edge_for_method_defined_in_single_inheritance_grand_parent(self):
+		if sys.version_info.major == 2:
+			return
+			
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def my_method(self):\n'
@@ -309,6 +315,9 @@ class TestPythonIndexer(unittest.TestCase):
 
 
 	def test_indexer_records_override_edge_for_method_defined_in_multi_inheritance_parent(self):
+		if sys.version_info.major == 2:
+			return
+			
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def my_method(self):\n'
@@ -323,6 +332,9 @@ class TestPythonIndexer(unittest.TestCase):
 
 
 	def test_indexer_records_override_edge_for_method_defined_in_multi_inheritance_diamond_grand_parent(self):
+		if sys.version_info.major == 2:
+			return
+			
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def my_method(self):\n'
@@ -682,7 +694,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('virtual_file.Foo.__init__<self> at [4:4|4:7]' in client.localSymbols)
 
 
-	def test_issue_30(self): # Unable to solve method calls for multiple inheritence if "super()" is used
+	def test_issue_30(self): # Unable to solve method calls for multiple inheritance if "super()" is used
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def foo(self):\n'
