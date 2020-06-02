@@ -282,6 +282,62 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('INHERITANCE: virtual_file.Baz -> virtual_file.Bar at [5:16|5:18]' in client.references)
 
 
+	def test_indexer_records_override_edge_for_method_defined_in_single_inheritance_parent(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def my_method(self):\n'
+			'		pass\n'
+			'class Bar(Foo):\n'
+			'	def my_method(self):\n'
+			'		pass\n'
+		)
+		self.assertTrue('OVERRIDE: virtual_file.Bar.my_method -> virtual_file.Foo.my_method at [2:6|2:14]' in client.references)
+
+
+	def test_indexer_records_override_edge_for_method_defined_in_single_inheritance_grand_parent(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def my_method(self):\n'
+			'		pass\n'
+			'class Bar(Foo):\n'
+			'	pass\n'
+			'class Baz(Bar):\n'
+			'	def my_method(self):\n'
+			'		pass\n'
+		)
+		self.assertTrue('OVERRIDE: virtual_file.Baz.my_method -> virtual_file.Foo.my_method at [2:6|2:14]' in client.references)
+
+
+	def test_indexer_records_override_edge_for_method_defined_in_multi_inheritance_parent(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def my_method(self):\n'
+			'		pass\n'
+			'class Bar:\n'
+			'	pass\n'
+			'class Baz(Foo, Bar):\n'
+			'	def my_method(self):\n'
+			'		pass\n'
+		)
+		self.assertTrue('OVERRIDE: virtual_file.Baz.my_method -> virtual_file.Foo.my_method at [2:6|2:14]' in client.references)
+
+
+	def test_indexer_records_override_edge_for_method_defined_in_multi_inheritance_diamond_grand_parent(self):
+		client = self.indexSourceCode(
+			'class Foo:\n'
+			'	def my_method(self):\n'
+			'		pass\n'
+			'class Bar1(Foo):\n'
+			'	pass\n'
+			'class Bar2(Foo):\n'
+			'	pass\n'
+			'class Baz(Bar1, Bar2):\n'
+			'	def my_method(self):\n'
+			'		pass\n'
+		)
+		self.assertTrue('OVERRIDE: virtual_file.Baz.my_method -> virtual_file.Foo.my_method at [2:6|2:14]' in client.references)
+
+
 	def test_indexer_records_instantiation_of_custom_class(self):
 		client = self.indexSourceCode(
 			'class Bar:\n'

@@ -25,7 +25,9 @@ class SourcetrailScript(jedi.Script):
 		jedi.Script.__init__(self, source, line, column, path, encoding, sys_path, environment, _project)
 
 	def _goto(self, line, column, follow_imports=False, follow_builtin_imports=False,
-				only_stubs=False, prefer_stubs=False):
+				only_stubs=False, prefer_stubs=False, follow_override=False):
+		if follow_override:
+			return super()._goto(line, column, follow_imports=follow_imports, follow_builtin_imports=follow_builtin_imports, only_stubs=only_stubs, prefer_stubs=prefer_stubs)
 		tree_name = self._module_node.get_name_of_position((line, column))
 		if tree_name is None:
 			# Without a name we really just want to jump to the result e.g.
@@ -317,6 +319,42 @@ class AstVisitor:
 		self.client.recordSymbolScopeLocation(symbolId, getSourceRangeOfNode(node))
 		self.contextStack.append(ContextInfo(symbolId, symbolNameHierarchy.getDisplayString(), node))
 
+		self.recordFunctionOverrideEdge(nameNode)
+
+		
+	def recordFunctionOverrideEdge(self, functionNameNode):
+		try:
+			functionNameHierarchy = self.getNameHierarchyOfNode(functionNameNode, self.sourceFilePath)
+			if functionNameHierarchy is None:
+				return
+			functionSymbolId = self.client.recordSymbol(functionNameHierarchy)
+			
+			(startLine, startColumn) = functionNameNode.start_pos
+			script = self.createScript(self.sourceFilePath)
+			for definition in script.goto(line=startLine, column=startColumn, follow_imports=True, follow_override=True):
+				if definition is None:
+					continue
+
+				overriddenNameNode = definition._name.tree_name
+
+				if functionNameNode.start_pos == overriddenNameNode.start_pos:
+					continue
+
+				overriddenNameHierarchy = self.getNameHierarchyOfNode(overriddenNameNode, self.sourceFilePath)
+				if overriddenNameHierarchy is None:
+					continue
+				overriddenSymbolId = self.client.recordSymbol(overriddenNameHierarchy)
+
+				referenceId = self.client.recordReference(
+					functionSymbolId,
+					overriddenSymbolId,
+					srctrl.REFERENCE_OVERRIDE
+				)
+
+				self.client.recordReferenceLocation(referenceId, getSourceRangeOfNode(overriddenNameNode))
+		except Exception:
+			pass
+			
 
 	def endVisitFuncdef(self, node):
 		if len(self.contextStack) > 0:
@@ -829,19 +867,7 @@ class AstVisitor:
 	def getDefinitionsOfNode(self, node, nodeSourceFilePath):
 		try:
 			(startLine, startColumn) = node.start_pos
-			if nodeSourceFilePath == _virtualFilePath: # we are indexing a provided code snippet
-				script = SourcetrailScript(
-					source = self.sourceFileContent,
-					environment = self.environment,
-					sys_path = self.sysPath
-				)
-			else: # we are indexing a real file
-				script = SourcetrailScript(
-					source = None,
-					path = nodeSourceFilePath,
-					environment = self.environment,
-					sys_path = self.sysPath
-				)
+			script = self.createScript(nodeSourceFilePath)
 			return script.goto(line=startLine, column=startColumn, follow_imports=True)
 
 		except Exception:
@@ -918,6 +944,22 @@ class AstVisitor:
 			return nameHierarchy
 
 		return None
+
+
+	def createScript(self, sourceFilePath):
+		if sourceFilePath == _virtualFilePath: # we are indexing a provided code snippet
+			return SourcetrailScript(
+				source = self.sourceFileContent,
+				environment = self.environment,
+				sys_path = self.sysPath
+			)
+		else: # we are indexing a real file
+			return SourcetrailScript(
+				source = None,
+				path = sourceFilePath,
+				environment = self.environment,
+				sys_path = self.sysPath
+			)
 
 
 class VerboseAstVisitor(AstVisitor):
