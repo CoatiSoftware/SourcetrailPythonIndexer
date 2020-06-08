@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v1.db25.p4
+
+**2020-06-08**
+
+* Implemented recording "override" edges that point from a method of a class to the overridden method in the class' base class.
+* Implemented fallback to derive source file encoding automatically if utf-8 does not work
+* Updated dependencies to parso 0.7.0.
+
+
 ## v1.db25.p3
 
 **2020-02-24**
