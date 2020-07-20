@@ -35,6 +35,7 @@ install:
     - SET PATH=%PYTHON_PATH%;%PIP_PATH%;%PATH%
     # install python dependencies
     - cmd: IF %PYTHON_VERSION% EQU 27 pip install enum34
+    - cmd: pip install -r requirements.txt
     # modify python dependencies
     - ps: |
         $MBIT_STRING = "Windows-" + $env:MBITS + "bit"
