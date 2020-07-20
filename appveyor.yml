@@ -7,13 +7,11 @@ environment:
         - MBITS: 32
           PYTHON_VERSION: 27
           MSVC_VERSION: 15
-          PYINSTALLER_VERSION: 3.4
           DEPLOY: 0
 
         - MBITS: 32
           PYTHON_VERSION: 37
           MSVC_VERSION: 15
-          PYINSTALLER_VERSION: 3.4
           DEPLOY: 1
 
 
@@ -35,14 +33,13 @@ install:
     - SET PATH=%PYTHON_PATH%;%PIP_PATH%;%PATH%
     # install python dependencies
     - cmd: IF %PYTHON_VERSION% EQU 27 pip install enum34
-    - cmd: pip install parso==0.7.0
-    - cmd: pip install jedi==0.16.0
-    - cmd: pip install pyinstaller==%PYINSTALLER_VERSION%
-    - cmd: pip list
+    - cmd: pip install -r requirements.txt
     # modify python dependencies
     - ps: |
+        $PYINSTALLER_VERSION = $(pyinstaller -v 2>&1)
+        echo "Pyinstaller version is ${PYINSTALLER_VERSION}"
         $MBIT_STRING = "Windows-" + $env:MBITS + "bit"
-        copy -force dependencies/pyinstaller/$env:PYINSTALLER_VERSION/bootloader/${MBIT_STRING}/* $env:PYTHON_PATH/Lib/site-packages/PyInstaller/bootloader/${MBIT_STRING}/
+        copy -force dependencies/pyinstaller/${PYINSTALLER_VERSION}/bootloader/${MBIT_STRING}/* $env:PYTHON_PATH/Lib/site-packages/PyInstaller/bootloader/${MBIT_STRING}/
     # prepare for SourcetrailDB build
     - cmd: git submodule init
     - cmd: git submodule update
