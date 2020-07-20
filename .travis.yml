@@ -48,6 +48,8 @@ script:
     PACKAGE_VERSION=$(python3 -c "from _version import __version__; print(__version__.replace('.', '_'))")
     export PACKAGE_NAME="SourcetrailPythonIndexer_${PACKAGE_VERSION}-${TRAVIS_OS_NAME}"
   - echo ${PACKAGE_NAME}
+  - git submodule init
+  - git submodule update
   - cd SourcetrailDB
   - mkdir build
   - cd build
