@@ -35,7 +35,7 @@ install:
     - cmd: IF %PYTHON_VERSION% EQU 27 pip install enum34
     - cmd: pip install -r requirements.txt
     # modify python dependencies
-    - ps: $env:PYINSTALLER_VERSION=cmd /c pyinstaller -v
+    - ps: $env:PYINSTALLER_VERSION = $(pyinstaller -v 2>&1) | out-null
     - ps: |
         echo "Pyinstaller version is $env:PYINSTALLER_VERSION"
         $MBIT_STRING = "Windows-" + $env:MBITS + "bit"
