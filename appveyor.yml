@@ -34,7 +34,7 @@ install:
     - SET PIP_PATH=%PYTHON_PATH%/Scripts
     - SET PATH=%PYTHON_PATH%;%PIP_PATH%;%PATH%
     # install python dependencies
-    - cmd: IF %DEPLOY% EQU 0 pip install enum34
+    - cmd: IF %PYTHON_VERSION% EQU 27 pip install enum34
     - cmd: pip install parso==0.7.0
     - cmd: pip install jedi==0.16.0
     - cmd: pip install pyinstaller==%PYINSTALLER_VERSION%
