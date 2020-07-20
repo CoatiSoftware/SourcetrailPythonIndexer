@@ -7,13 +7,11 @@ environment:
         - MBITS: 32
           PYTHON_VERSION: 27
           MSVC_VERSION: 15
-          PYINSTALLER_VERSION: 3.4
           DEPLOY: 0
 
         - MBITS: 32
           PYTHON_VERSION: 37
           MSVC_VERSION: 15
-          PYINSTALLER_VERSION: 3.4
           DEPLOY: 1
 
 
@@ -38,8 +36,10 @@ install:
     - cmd: pip install -r requirements.txt
     # modify python dependencies
     - ps: |
+        $PYINSTALLER_VERSION = pyinstaller -v
+        echo "Pyinstaller version is ${PYINSTALLER_VERSION}"
         $MBIT_STRING = "Windows-" + $env:MBITS + "bit"
-        copy -force dependencies/pyinstaller/$env:PYINSTALLER_VERSION/bootloader/${MBIT_STRING}/* $env:PYTHON_PATH/Lib/site-packages/PyInstaller/bootloader/${MBIT_STRING}/
+        copy -force dependencies/pyinstaller/${PYINSTALLER_VERSION}/bootloader/${MBIT_STRING}/* $env:PYTHON_PATH/Lib/site-packages/PyInstaller/bootloader/${MBIT_STRING}/
     # prepare for SourcetrailDB build
     - cmd: git submodule init
     - cmd: git submodule update
