@@ -44,8 +44,8 @@ install:
         $MBIT_STRING = "Windows-" + $env:MBITS + "bit"
         copy -force dependencies/pyinstaller/$env:PYINSTALLER_VERSION/bootloader/${MBIT_STRING}/* $env:PYTHON_PATH/Lib/site-packages/PyInstaller/bootloader/${MBIT_STRING}/
     # prepare for SourcetrailDB build
-    - ps: $env:SOURCETRAIL_DB_VERSION = python -c "from _version import _sourcetrail_db_version; print(_sourcetrail_db_version)"
-    - cmd: git clone -q --branch=%SOURCETRAIL_DB_VERSION% https://github.com/CoatiSoftware/SourcetrailDB.git
+    - cmd: git submodule init
+    - cmd: git submodule update
     # Install SWIG by Choco
     - ps: choco install -y --no-progress swig
 

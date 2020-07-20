@@ -48,9 +48,8 @@ script:
     PACKAGE_VERSION=$(python3 -c "from _version import __version__; print(__version__.replace('.', '_'))")
     export PACKAGE_NAME="SourcetrailPythonIndexer_${PACKAGE_VERSION}-${TRAVIS_OS_NAME}"
   - echo ${PACKAGE_NAME}
-  - |
-    SOURCETRAIL_DB_VERSION=$(python3 -c "from _version import _sourcetrail_db_version; print(_sourcetrail_db_version)")
-    git clone -q --branch=${SOURCETRAIL_DB_VERSION} https://github.com/CoatiSoftware/SourcetrailDB.git
+  - git submodule init
+  - git submodule update
   - cd SourcetrailDB
   - mkdir build
   - cd build
