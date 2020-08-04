@@ -38,15 +38,15 @@ class SourcetrailScript(jedi.Script):
 		names = list(name.goto())
 
 		if follow_imports:
-			names = helpers.filter_follow_imports(names)
+			names = helpers.filter_follow_imports(names, follow_builtin_imports)
 		names = convert_names(
 			names,
 			only_stubs=only_stubs,
 			prefer_stubs=prefer_stubs,
 		)
 
-		defs = [classes.Definition(self._inference_state, d) for d in set(names)]
-		return helpers.sorted_definitions(defs)
+		defs = [classes.Name(self._inference_state, d) for d in set(names)]
+		return list(set(helpers.sorted_definitions(defs)))
 
 
 def isValidEnvironment(environmentPath):
@@ -128,7 +128,7 @@ def indexSourceCode(sourceCode, workingDirectory, astVisitorClient, isVerbose, e
 
 	environment = getEnvironment(environmentPath)
 
-	project = jedi.api.project.Project(workingDirectory, environment = environment)
+	project = jedi.api.project.Project(workingDirectory, environment_path = environment.path)
 
 	evaluator = InferenceState(
 		project,
@@ -170,7 +170,7 @@ def indexSourceFile(sourceFilePath, environmentPath, workingDirectory, astVisito
 	if isVerbose:
 		print('INFO: Using Python environment at "' + environment.path + '" for indexing.')
 
-	project = jedi.api.project.Project(workingDirectory, environment = environment)
+	project = jedi.api.project.Project(workingDirectory, environment_path = environment.path)
 
 	evaluator = InferenceState(
 		project,
