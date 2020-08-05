@@ -38,7 +38,7 @@ install:
     - cmd: git submodule init
     - cmd: git submodule update
     # Install SWIG by Choco
-    - ps: choco install -y --no-progress swig
+    - ps: choco install -y --no-progress swig --version 4.0.1
 
 
 before_build:
