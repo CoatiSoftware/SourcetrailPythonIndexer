@@ -283,9 +283,6 @@ class TestPythonIndexer(unittest.TestCase):
 
 
 	def test_indexer_records_override_edge_for_method_defined_in_single_inheritance_parent(self):
-		if sys.version_info.major == 2:
-			return
-
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def my_method(self):\n'
@@ -297,10 +294,7 @@ class TestPythonIndexer(unittest.TestCase):
 		self.assertTrue('OVERRIDE: virtual_file.Bar.my_method -> virtual_file.Foo.my_method at [2:6|2:14]' in client.references)
 
 
-	def test_indexer_records_override_edge_for_method_defined_in_single_inheritance_grand_parent(self):
-		if sys.version_info.major == 2:
-			return
-			
+	def test_indexer_records_override_edge_for_method_defined_in_single_inheritance_grand_parent(self):			
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def my_method(self):\n'
@@ -315,9 +309,6 @@ class TestPythonIndexer(unittest.TestCase):
 
 
 	def test_indexer_records_override_edge_for_method_defined_in_multi_inheritance_parent(self):
-		if sys.version_info.major == 2:
-			return
-			
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def my_method(self):\n'
@@ -332,9 +323,6 @@ class TestPythonIndexer(unittest.TestCase):
 
 
 	def test_indexer_records_override_edge_for_method_defined_in_multi_inheritance_diamond_grand_parent(self):
-		if sys.version_info.major == 2:
-			return
-			
 		client = self.indexSourceCode(
 			'class Foo:\n'
 			'	def my_method(self):\n'
