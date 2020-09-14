@@ -15,8 +15,8 @@ The SourcetrailPythonIndexer project is a Sourcetrail language extension that br
 
 ## Requirements
 * [Python 3](https://www.python.org)
-* [jedi 0.17.2](https://pypi.org/project/jedi/0.13.2)
-* [parso 0.7.0](https://pypi.org/project/parso/0.3.1)
+* [jedi 0.17.2](https://pypi.org/project/jedi/0.17.2)
+* [parso 0.7.0](https://pypi.org/project/parso/0.7.0)
 * [SourcetrailDB](https://github.com/CoatiSoftware/SourcetrailDB) Python bindings
 
 
@@ -30,28 +30,58 @@ The SourcetrailPythonIndexer project is a Sourcetrail language extension that br
 To index an arbitrary Python source file, execute the command:
 
 ```
-$ python run.py --source-file-path=path/to/your/python/file.py --database-file-path=path/to/output/database/file.srctrldb
+$ python run.py index --source-file-path=path/to/your/python/file.py --database-file-path=path/to/output/database/file.srctrldb
 ```
 
 This will index the source file and store the data to the provided database filepath. If the database does not exist, an empty database will be created.
 
-You can access an overview that lists all available command line parameters by providing the `-h` argument, which will print the following output to your console:
+You can access an overview that lists all available commands by providing the `-h` argument, which will print the following output to your console:
 ```
 $ python run.py -h
-usage: run.py [-h] --database-file-path DATABASE_FILE_PATH --source-file-path
-              SOURCE_FILE_PATH [--clear] [--verbose]
+usage: run.py [-h] [--version] {index,check-environment} ...
 
-Index a Python source file and store the indexed data to a Sourcetrail
-database file.
+Python source code indexer that generates a Sourcetrail compatible database.
 
 optional arguments:
   -h, --help            show this help message and exit
-  --database-file-path DATABASE_FILE_PATH
-                        path to the generated Sourcetrail database file
+  --version             show program's version number and exit
+
+commands:
+  {index,check-environment}
+    index               Index a Python source file and store the indexed data
+                        to a Sourcetrail database file. Run "index -h" for
+                        more info on available arguments.
+    check-environment   Check if the provided path specifies a valid Python
+                        environment. This command exits with code "0" if a
+                        valid Python environment has been provided, otherwise
+                        code "1" is returned. Run "check-environment -h" for
+                        more info on available arguments.
+```
+
+You can also view a detailed summary of all available arguments for the `index` command by providing the `-h` argument here. This will print the following output to your console:
+```
+$ python run.py index -h
+usage: run.py index [-h] --source-file-path SOURCE_FILE_PATH
+                    --database-file-path DATABASE_FILE_PATH
+                    [--environment-path ENVIRONMENT_PATH] [--clear]
+                    [--verbose] [--shallow]
+
+optional arguments:
+  -h, --help            show this help message and exit
   --source-file-path SOURCE_FILE_PATH
                         path to the source file to index
+  --database-file-path DATABASE_FILE_PATH
+                        path to the generated Sourcetrail database file
+  --environment-path ENVIRONMENT_PATH
+                        path to the Python executable or the directory that
+                        contains the Python environment that should be used to
+                        resolve dependencies within the indexed source code
+                        (if not specified the path to the currently used
+                        interpreter is used)
   --clear               clear the database before indexing
   --verbose             enable verbose console output
+  --shallow             use a quick indexing mode that matches references by
+                        name and ignores most of the context
 ```
 
 
@@ -60,7 +90,7 @@ optional arguments:
 The availble [release packages](https://github.com/CoatiSoftware/SourcetrailPythonIndexer/releases) already contain a functional Python enviroment and all the dependencies. To index an arbitrary Python source file just execute the command:
 
 ```
-$ path/to/SourcetrailPythonIndexer --source-file-path=path/to/your/python/file.py --database-file-path=path/to/output/database/file.srctrldb
+$ path/to/SourcetrailPythonIndexer index --source-file-path=path/to/your/python/file.py --database-file-path=path/to/output/database/file.srctrldb
 ```
 
 
@@ -68,6 +98,7 @@ $ path/to/SourcetrailPythonIndexer --source-file-path=path/to/your/python/file.p
 To run the tests for this project, execute the command:
 ```
 $ python test.py
+$ python test_shallow.py
 ```
 
 
@@ -87,11 +118,11 @@ To create a pull request, follow these steps:
 
 
 ## Sourcetrail Integration
-To run the python indexer from within your Sourcetrail installation, follow these steps:
+To run the lastest release of the Python indexer from within your Sourcetrail installation, follow these steps:
 * download the latest [Release](https://github.com/CoatiSoftware/SourcetrailPythonIndexer/releases) for your OS and extract the package to a directory of your choice
 * make sure that you are running Sourcetrail 2018.4.45 or a later version
 * add a new "Custom Command Source Group" to a new or to an existing Sourcetrail project
-* paste the following string into the source group's "Custom Command" field: `path/to/SourcetrailPythonIndexer --source-file-path=%{SOURCE_FILE_PATH} --database-file-path=%{DATABASE_FILE_PATH}`
+* paste the following string into the source group's "Custom Command" field: `path/to/SourcetrailPythonIndexer index --source-file-path=%{SOURCE_FILE_PATH} --database-file-path=%{DATABASE_FILE_PATH}`
 * add your Python files (or the folders that contain those files) to the "Files & Directories to Index" list
 * add a ".py" entry to the "Source File Extensions" list (including the dot)
 * confirm the settings and start the indexing process
