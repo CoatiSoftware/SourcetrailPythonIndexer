@@ -28,12 +28,6 @@ install:
     - SET PATH=%PYTHON_PATH%;%PIP_PATH%;%PATH%
     # install python dependencies
     - cmd: pip install -r requirements.txt
-    # modify python dependencies
-    - ps: |
-        $PYINSTALLER_VERSION = $(pyinstaller -v 2>&1)
-        echo "Pyinstaller version is ${PYINSTALLER_VERSION}"
-        $MBIT_STRING = "Windows-" + $env:MBITS + "bit"
-        copy -force dependencies/pyinstaller/${PYINSTALLER_VERSION}/bootloader/${MBIT_STRING}/* $env:PYTHON_PATH/Lib/site-packages/PyInstaller/bootloader/${MBIT_STRING}/
     # prepare for SourcetrailDB build
     - cmd: git submodule init
     - cmd: git submodule update
