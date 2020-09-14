@@ -27,7 +27,7 @@ def main():
 	)
 	parserIndex.add_argument('--clear', help='clear the database before indexing', action='store_true', required=False)
 	parserIndex.add_argument('--verbose', help='enable verbose console output', action='store_true', required=False)
-	parserIndex.add_argument('--shallow', action='store_true', required=False)
+	parserIndex.add_argument('--shallow', help='use a quick indexing mode that matches references by name and ignores most of the context', action='store_true', required=False)
 
 	checkEnvironmentCommandName = 'check-environment'
 	parserCheckEnvironment = subparsers.add_parser(
