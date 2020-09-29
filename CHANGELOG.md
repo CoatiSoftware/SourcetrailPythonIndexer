@@ -1,12 +1,21 @@
 # Changelog
 
 
+## v1.db25.p5
+
+**2020-09-14**
+
+* Removed usage of Python 2 as host environment for running the Python indexer.
+* Updated dependencies to jedi 0.17.2.
+* Updated to pyinstaller 3.6 to address a security issue pointed out by GitHub.
+
+
 ## v1.db25.p4
 
 **2020-06-08**
 
 * Implemented recording "override" edges that point from a method of a class to the overridden method in the class' base class.
-* Implemented fallback to derive source file encoding automatically if utf-8 does not work
+* Implemented fallback to derive source file encoding automatically if utf-8 does not work.
 * Updated dependencies to parso 0.7.0.
 
 
