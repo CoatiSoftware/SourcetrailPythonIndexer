@@ -6,17 +6,15 @@ matrix:
     - os: linux
       sudo: required
       compiler: gcc
-      dist: trusty
+      dist: bionic
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
           packages:
             - g++-5
-            - "python3"
-            - "python3-pip"
       env:
-        - CC_COMPILER=gcc-5 CXX_COMPILER=g++-5 PYTHON=3.4
+        - CC_COMPILER=gcc-5 CXX_COMPILER=g++-5 PYTHON=3.6
 
     - os: osx
       compiler: clang
@@ -38,7 +36,8 @@ before_install:
 install:
   - if [[ "${CXX_COMPILER}" != "" ]]; then export CXX=${CXX_COMPILER}; export CXX_FOR_BUILD=${CXX_COMPILER}; fi
   - if [[ "${CC_COMPILER}" != "" ]]; then export CC=${CC_COMPILER}; export CC_FOR_BUILD=${CC_COMPILER}; fi
-  - sudo pip3 install -r requirements.txt
+  - pyenv shell 3.6
+  - pip3 install -r requirements.txt
 
 
 script:
