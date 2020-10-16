@@ -571,7 +571,7 @@ class TestAstVisitorClient():
 			self.referenceIdsToData[referenceId]['reference_location'].append(sourceRange.toString())
 
 
-	def recordReferenceIsAmbiuous(self, referenceId):
+	def recordReferenceIsAmbiguous(self, referenceId):
 		raise NotImplementedError
 
 
