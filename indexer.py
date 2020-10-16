@@ -1068,8 +1068,8 @@ class AstVisitorClient:
 		)
 
 
-	def recordReferenceIsAmbiuous(self, referenceId):
-		return srctrl.recordReferenceIsAmbiuous(referenceId)
+	def recordReferenceIsAmbiguous(self, referenceId):
+		return srctrl.recordReferenceIsAmbiguous(referenceId)
 
 
 	def recordReferenceToUnsolvedSymhol(self, contextSymbolId, referenceKind, sourceRange):
