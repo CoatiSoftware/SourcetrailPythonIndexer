@@ -628,7 +628,7 @@ class AstVisitor:
 		elif getParentWithType(node, 'import_from'):
 			referenceKind = srctrl.REFERENCE_IMPORT
 
-		if referenceKind is -1:
+		if referenceKind == -1:
 			return False
 
 		referenceId = self.client.recordReference(
