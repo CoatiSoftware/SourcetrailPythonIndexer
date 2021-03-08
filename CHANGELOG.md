@@ -1,6 +1,13 @@
 # Changelog
 
 
+## v1.db25.p6
+
+**2021-03-08**
+
+* Updated SourcetrailDB dependency to v4.db25.p1 to fix Sourcetrail indexer crash when indexed file used a single "\r" to end a line.
+
+
 ## v1.db25.p5
 
 **2020-09-14**
